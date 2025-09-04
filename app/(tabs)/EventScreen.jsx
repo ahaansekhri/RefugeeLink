@@ -7,40 +7,53 @@ import {
   StyleSheet,
   ScrollView,
   ActivityIndicator,
+  Modal,
+  Button,
+  Alert,
 } from "react-native";
-import { db } from "../../config/firebase";
-import { collection, getDocs } from "firebase/firestore";
+import { db, auth } from "../../config/firebase";
+import {
+  collection,
+  getDocs,
+  doc,
+  updateDoc,
+  getDoc,
+  increment,
+  arrayUnion,
+} from "firebase/firestore";
 
-// Reusable Event Card
-const EventCard = ({ event }) => {
+const EventCard = ({ event, onPress }) => {
   return (
-    <View style={styles.card}>
-      <Text style={styles.title}>{event.name}</Text>
-      <Text style={styles.subText}>📅 {event.date} | ⏰ {event.time} ({event.duration})</Text>
-      <Text style={styles.subText}>📍 {event.location} | 🏢 {event.ngoName}</Text>
-      <Text style={styles.subText}>👥 Slots: {event.slots}</Text>
-      <Text style={styles.subText}>🌐 Languages: {event.languages?.join(", ")}</Text>
-      <Text style={styles.subText}>🎯 Available to: {event.clientGroup?.join(", ")}</Text>
-      <Text style={styles.subText}>📌 Type: {event.activityType}</Text>
-      <Text style={styles.subText}>🚍 Transport: {event.transport}</Text>
-      <Text style={styles.briefDesc}>{event.description?.slice(0, 60)}...</Text>
-    </View>
+    <TouchableOpacity onPress={() => onPress(event)}>
+      <View style={styles.card}>
+        <Text style={styles.title}>{event.name}</Text>
+        <Text style={styles.subText}>
+          📅 {event.date} | ⏰ {event.time} ({event.duration})
+        </Text>
+        <Text style={styles.subText}>
+          📍 {event.location} | 🏢 {event.ngoName}
+        </Text>
+        <Text style={styles.subText}>👥 Slots: {event.slots}</Text>
+        <Text style={styles.subText}>
+          🌐 Languages: {event.languages?.join(", ")}
+        </Text>
+        <Text style={styles.subText}>
+          🎯 Available to: {event.clientGroup?.join(", ")}
+        </Text>
+        <Text style={styles.subText}>📌 Type: {event.activityType}</Text>
+        <Text style={styles.subText}>🚍 Transport: {event.transport}</Text>
+        <Text style={styles.briefDesc}>
+          {event.description?.slice(0, 60)}...
+        </Text>
+      </View>
+    </TouchableOpacity>
   );
 };
-
-const clientGroups = ["Refugees", "Asylum Seekers", "General Public"];
-const activityClasses = ["Education", "Skill Building", "Legal", "Health & Wellbeing", "Tech Skills"];
-const languages = ["English", "Cantonese", "Urdu", "Arabic", "Mandarin", "Somali", "French"];
-const districts = ["Wan Chai", "Causeway Bay", "Tsim Tsa Tsui", "Mong Kok"];
-const transportOptions = [
-  "Provided to all immigration paper (Form 8) holders",
-  "Registered members of the NGO",
-  "No transportation allowance is provided"
-];
 
 const EventList = () => {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedEvent, setSelectedEvent] = useState(null); // modal state
   const [filters, setFilters] = useState({
     clientGroup: "",
     activityType: "",
@@ -53,7 +66,10 @@ const EventList = () => {
     const fetchEvents = async () => {
       try {
         const snapshot = await getDocs(collection(db, "events"));
-        const eventList = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+        const eventList = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
         setEvents(eventList);
       } catch (error) {
         console.log("Error fetching events:", error);
@@ -67,7 +83,7 @@ const EventList = () => {
   const toggleFilter = (field, value) => {
     setFilters((prev) => ({
       ...prev,
-      [field]: prev[field] === value ? "" : value, // toggle
+      [field]: prev[field] === value ? "" : value,
     }));
   };
 
@@ -83,16 +99,106 @@ const EventList = () => {
     });
   };
 
-  if (loading) return <ActivityIndicator size="large" style={{ marginTop: 50 }} />;
+  // ✅ Firestore registration logic
+  const registerForEvent = async (eventId) => {
+    try {
+      const userId = auth.currentUser?.uid;
+      if (!userId) {
+        Alert.alert("Error", "You must be logged in to register.");
+        return;
+      }
+
+      const eventRef = doc(db, "events", eventId);
+      const eventSnap = await getDoc(eventRef);
+
+      if (!eventSnap.exists()) {
+        Alert.alert("Error", "Event not found.");
+        return;
+      }
+
+      const eventData = eventSnap.data();
+
+      // Check if already registered
+      if (eventData.registeredUsers?.includes(userId)) {
+        Alert.alert("Notice", "You have already registered for this event.");
+        return;
+      }
+
+      // Check if slots available
+      if (eventData.enrolledCount >= eventData.slots) {
+        Alert.alert("Full", "No spots left.");
+        return;
+      }
+
+      // Update Firestore
+      await updateDoc(eventRef, {
+        enrolledCount: increment(1),
+        registeredUsers: arrayUnion(userId),
+      });
+
+      Alert.alert("Success", "You have registered for the event.");
+      setSelectedEvent(null);
+    } catch (error) {
+      console.error("Error registering:", error);
+      Alert.alert("Error", "Something went wrong.");
+    }
+  };
+
+  if (loading)
+    return <ActivityIndicator size="large" style={{ marginTop: 50 }} />;
 
   return (
     <View style={{ flex: 1, backgroundColor: "#fff" }}>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterBar}>
-        {[{ label: "Client", options: clientGroups, field: "clientGroup" },
-          { label: "Activity", options: activityClasses, field: "activityType" },
-          { label: "Language", options: languages, field: "language" },
-          { label: "District", options: districts, field: "district" },
-          { label: "Transport", options: transportOptions, field: "transport" },
+      {/* Filter Bar */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.filterBar}
+      >
+        {[
+          {
+            label: "Client",
+            options: ["Refugees", "Asylum Seekers", "General Public"],
+            field: "clientGroup",
+          },
+          {
+            label: "Activity",
+            options: [
+              "Education",
+              "Skill Building",
+              "Legal",
+              "Health & Wellbeing",
+              "Tech Skills",
+            ],
+            field: "activityType",
+          },
+          {
+            label: "Language",
+            options: [
+              "English",
+              "Cantonese",
+              "Urdu",
+              "Arabic",
+              "Mandarin",
+              "Somali",
+              "French",
+            ],
+            field: "language",
+          },
+          {
+            label: "District",
+            options: ["Wan Chai", "Causeway Bay", "Tsim Tsa Tsui", "Mong Kok"],
+            field: "district",
+          },
+          {
+            label: "Transport",
+            options: [
+              "Provided to all immigration paper (Form 8) holders",
+              "Registered members of the NGO",
+              "No transportation allowance is provided",
+            ],
+            field: "transport",
+          },
         ].map((f) => (
           <View key={f.field} style={styles.filterSection}>
             <Text style={styles.filterLabel}>{f.label}</Text>
@@ -100,7 +206,10 @@ const EventList = () => {
               {f.options.map((opt) => (
                 <TouchableOpacity
                   key={opt}
-                  style={[styles.filterBtn, filters[f.field] === opt && styles.activeFilter]}
+                  style={[
+                    styles.filterBtn,
+                    filters[f.field] === opt && styles.activeFilter,
+                  ]}
                   onPress={() => toggleFilter(f.field, opt)}
                 >
                   <Text style={{ fontSize: 12 }}>{opt}</Text>
@@ -111,13 +220,81 @@ const EventList = () => {
         ))}
       </ScrollView>
 
+      {/* Events */}
       <FlatList
         data={applyFilters()}
         keyExtractor={(item) => item.id}
-        renderItem={({ item }) => <EventCard event={item} />}
+        renderItem={({ item }) => (
+          <EventCard event={item} onPress={setSelectedEvent} />
+        )}
         contentContainerStyle={{ padding: 12 }}
-        ListEmptyComponent={<Text style={{ textAlign: "center", marginTop: 30 }}>No events found</Text>}
+        ListEmptyComponent={
+          <Text style={{ textAlign: "center", marginTop: 30 }}>
+            No events found
+          </Text>
+        }
       />
+
+      {/* Modal */}
+      <Modal
+        visible={!!selectedEvent}
+        animationType="slide"
+        onRequestClose={() => setSelectedEvent(null)}
+      >
+        <ScrollView style={{ padding: 16, backgroundColor: "#fff" }}>
+          {selectedEvent && (
+            <>
+              <Text style={styles.modalTitle}>{selectedEvent.name}</Text>
+              <Text style={styles.modalSub}>
+                📅 {selectedEvent.date} | ⏰ {selectedEvent.time} (
+                {selectedEvent.duration})
+              </Text>
+              <Text style={styles.modalSub}>📍 {selectedEvent.location}</Text>
+              <Text style={styles.modalSub}>🏢 {selectedEvent.ngoName}</Text>
+              <Text style={styles.modalSub}>👥 Slots: {selectedEvent.slots}</Text>
+              <Text style={styles.modalSub}>
+                🌐 Languages: {selectedEvent.languages?.join(", ")}
+              </Text>
+              <Text style={styles.modalSub}>
+                🎯 Available to: {selectedEvent.clientGroup?.join(", ")}
+              </Text>
+              <Text style={styles.modalSub}>
+                📌 Type: {selectedEvent.activityType}
+              </Text>
+              <Text style={styles.modalSub}>
+                🚍 Transport: {selectedEvent.transport}
+              </Text>
+
+              <Text style={styles.sectionTitle}>About This Class</Text>
+              <Text style={styles.modalText}>{selectedEvent.description}</Text>
+
+              <Text style={styles.sectionTitle}>What You Need</Text>
+              <Text style={styles.modalText}>
+                {selectedEvent.requirements ||
+                  "Notebook, pen, and positive attitude"}
+              </Text>
+
+              <Text style={styles.sectionTitle}>
+                About {selectedEvent.ngoName}
+              </Text>
+              <Text style={styles.modalText}>
+                {selectedEvent.ngoInfo ||
+                  "This NGO has been serving the community for years."}
+              </Text>
+
+              {/* ✅ Register Button */}
+              <Button
+                title="Register"
+                onPress={() => registerForEvent(selectedEvent.id)}
+              />
+
+              <View style={{ marginTop: 10 }}>
+                <Button title="Close" onPress={() => setSelectedEvent(null)} />
+              </View>
+            </>
+          )}
+        </ScrollView>
+      </Modal>
     </View>
   );
 };
@@ -154,4 +331,13 @@ const styles = StyleSheet.create({
     backgroundColor: "#cce5ff",
     borderColor: "#3399ff",
   },
+  modalTitle: { fontSize: 22, fontWeight: "bold", marginBottom: 10 },
+  modalSub: { fontSize: 14, marginBottom: 6, color: "#555" },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    marginTop: 14,
+    marginBottom: 6,
+  },
+  modalText: { fontSize: 14, color: "#333", marginBottom: 10 },
 });
