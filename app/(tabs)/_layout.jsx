@@ -1,25 +1,25 @@
 // src/navigation/StackLayout.jsx
 
-import React, { useEffect, useState } from "react";
-import { createStackNavigator } from "@react-navigation/stack";
+import { Ionicons } from "@expo/vector-icons";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createDrawerNavigator } from '@react-navigation/drawer';
-import { NavigationContainer, useNavigation } from "@react-navigation/native";
-import { Ionicons } from "@expo/vector-icons";
-import { View, ActivityIndicator, Alert } from "react-native";
-import { signOut } from "firebase/auth";
-import { getFirestore, doc, getDoc } from "firebase/firestore";
-import { onAuthStateChanged } from "firebase/auth";
+import { useNavigation } from "@react-navigation/native";
+import { createStackNavigator } from "@react-navigation/stack";
+import { onAuthStateChanged, signOut } from "firebase/auth";
+import { doc, getDoc, getFirestore } from "firebase/firestore";
+import React, { useEffect, useState } from "react";
+import { ActivityIndicator, Alert, View } from "react-native";
 
 import AboutScreen from "./AboutScreen";
-import EventScreen from "./EventScreen";
-import NGOScreen from "./NGOScreen";
 import AddEvent from "./AddEvent";
+import EventScreen from "./EventScreen";
+import NGOProfile from "./NGOProfile";
+import NGOScreen from "./NGOScreen";
 import LoginRegister from "./index";
 
+import { auth } from '../../config/firebase';
 import { Colors } from "../../constants/Colors";
 import { useColorScheme } from "../../hooks/useColorScheme";
-import { auth } from '../../config/firebase';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -69,14 +69,20 @@ const NGOTabs = () => {
           backgroundColor: Colors[colorScheme ?? "light"].background,
         },
         tabBarIcon: ({ focused, color, size }) => {
-          let iconName = route.name === "Add Event"
-            ? (focused ? "add-circle" : "add-circle-outline")
-            : "ellipse";
+          let iconName;
+          if (route.name === "Add Event") {
+            iconName = focused ? "add-circle" : "add-circle-outline";
+          } else if (route.name === "Profile") {
+            iconName = focused ? "person" : "person-outline";
+          } else {
+            iconName = "ellipse";
+          }
           return <Ionicons name={iconName} size={size} color={color} />;
         },
       })}
     >
       <Tab.Screen name="Add Event" component={AddEvent} />
+      <Tab.Screen name="Profile" component={NGOProfile} />
     </Tab.Navigator>
   );
 };

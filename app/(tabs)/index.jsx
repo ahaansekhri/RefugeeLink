@@ -1,15 +1,23 @@
 // AuthPage.jsx
-import React, { useState, useEffect } from 'react';
-import {
-  View, Text, TextInput, TouchableOpacity, ScrollView,
-  StyleSheet, ActivityIndicator, Alert
-} from 'react-native';
+import { useColorScheme } from '@/hooks/useColorScheme';
 import { useNavigation } from '@react-navigation/native';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile } from 'firebase/auth';
-import { auth } from '../../config/firebase';
-import { getFirestore, doc, setDoc } from 'firebase/firestore';
-import { useColorScheme } from '@/hooks/useColorScheme';
+import { doc, getFirestore, setDoc } from 'firebase/firestore';
+import React, { useEffect, useState } from 'react';
 import { useAuthState } from 'react-firebase-hooks/auth';
+import {
+    ActivityIndicator, Alert,
+    Dimensions,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text, TextInput, TouchableOpacity,
+    View
+} from 'react-native';
+import { auth } from '../../config/firebase';
+
+const { width: screenWidth } = Dimensions.get('window');
+const isWeb = Platform.OS === 'web';
 
 export default function AuthPage() {
   const navigation = useNavigation();
@@ -29,7 +37,68 @@ export default function AuthPage() {
   const [registerPassword, setRegisterPassword] = useState('');
   const [role, setRole] = useState('refugee');
 
+  // Error states for validation
+  const [errors, setErrors] = useState({});
+
   const db = getFirestore();
+
+  // Validation functions
+  const validateEmail = (email) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  const validatePassword = (password) => {
+    return password.length >= 6;
+  };
+
+  const validateName = (name) => {
+    return name.trim().length >= 2;
+  };
+
+  const validateLoginForm = () => {
+    const newErrors = {};
+    
+    if (!loginEmail.trim()) {
+      newErrors.loginEmail = 'Email is required';
+    } else if (!validateEmail(loginEmail)) {
+      newErrors.loginEmail = 'Please enter a valid email address';
+    }
+    
+    if (!loginPassword) {
+      newErrors.loginPassword = 'Password is required';
+    } else if (!validatePassword(loginPassword)) {
+      newErrors.loginPassword = 'Password must be at least 6 characters';
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const validateRegisterForm = () => {
+    const newErrors = {};
+    
+    if (!registerName.trim()) {
+      newErrors.registerName = 'Full name is required';
+    } else if (!validateName(registerName)) {
+      newErrors.registerName = 'Name must be at least 2 characters';
+    }
+    
+    if (!registerEmail.trim()) {
+      newErrors.registerEmail = 'Email is required';
+    } else if (!validateEmail(registerEmail)) {
+      newErrors.registerEmail = 'Please enter a valid email address';
+    }
+    
+    if (!registerPassword) {
+      newErrors.registerPassword = 'Password is required';
+    } else if (!validatePassword(registerPassword)) {
+      newErrors.registerPassword = 'Password must be at least 6 characters';
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
   useEffect(() => {
     if (user) {
@@ -38,94 +107,256 @@ export default function AuthPage() {
   }, [user]);
 
   const handleLogin = async () => {
-    if (!loginEmail || !loginPassword) {
-      return Alert.alert('Error', 'Please fill all fields.');
+    if (!validateLoginForm()) {
+      return;
     }
+    
     setIsLoading(true);
     try {
-      await signInWithEmailAndPassword(auth, loginEmail, loginPassword);
+      await signInWithEmailAndPassword(auth, loginEmail.trim(), loginPassword);
       setIsLoading(false);
     } catch (error) {
       setIsLoading(false);
-      Alert.alert('Login Failed', error.message);
+      let errorMessage = 'Login failed. Please try again.';
+      
+      if (error.code === 'auth/user-not-found') {
+        errorMessage = 'No account found with this email address.';
+      } else if (error.code === 'auth/wrong-password') {
+        errorMessage = 'Incorrect password. Please try again.';
+      } else if (error.code === 'auth/invalid-email') {
+        errorMessage = 'Invalid email address.';
+      } else if (error.code === 'auth/too-many-requests') {
+        errorMessage = 'Too many failed attempts. Please try again later.';
+      }
+      
+      Alert.alert('Login Failed', errorMessage);
     }
   };
 
   const handleRegister = async () => {
-    if (!registerName || !registerEmail || !registerPassword) {
-      return Alert.alert('Error', 'Please fill all fields.');
+    if (!validateRegisterForm()) {
+      return;
     }
+    
     setIsLoading(true);
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, registerEmail, registerPassword);
+      const userCredential = await createUserWithEmailAndPassword(auth, registerEmail.trim(), registerPassword);
       await updateProfile(userCredential.user, {
-        displayName: registerName,
+        displayName: registerName.trim(),
       });
       await setDoc(doc(db, 'users', userCredential.user.uid), {
         uid: userCredential.user.uid,
-        name: registerName,
-        email: registerEmail,
+        name: registerName.trim(),
+        email: registerEmail.trim(),
         role: role,
       });
       setIsLoading(false);
     } catch (error) {
       setIsLoading(false);
-      Alert.alert('Registration Failed', error.message);
+      let errorMessage = 'Registration failed. Please try again.';
+      
+      if (error.code === 'auth/email-already-in-use') {
+        errorMessage = 'An account with this email already exists.';
+      } else if (error.code === 'auth/invalid-email') {
+        errorMessage = 'Invalid email address.';
+      } else if (error.code === 'auth/weak-password') {
+        errorMessage = 'Password is too weak. Please choose a stronger password.';
+      }
+      
+      Alert.alert('Registration Failed', errorMessage);
     }
   };
 
   return (
-    <ScrollView contentContainerStyle={[styles.container, isDarkMode && { backgroundColor: '#121212' }]} keyboardShouldPersistTaps="handled">
-      <View style={styles.iconContainer}>
-        <View style={styles.iconCircle}>
-          <Text style={styles.icon}>🛡️</Text>
+    <ScrollView 
+      contentContainerStyle={[styles.container, isDarkMode && { backgroundColor: '#121212' }]} 
+      keyboardShouldPersistTaps="handled"
+      {...(isWeb && {
+        style: { minHeight: '100vh' },
+        contentContainerStyle: [styles.container, isDarkMode && { backgroundColor: '#121212' }, { minHeight: '100vh' }]
+      })}
+    >
+      <View style={styles.contentWrapper}>
+        <View style={styles.iconContainer}>
+          <View style={styles.iconCircle}>
+            <Text style={styles.icon}>🛡️</Text>
+          </View>
         </View>
-      </View>
-      <Text style={[styles.title, isDarkMode && { color: '#fff' }]}>Welcome to Our App</Text>
+        <Text style={[styles.title, isDarkMode && { color: '#fff' }]}>RefugeeLink</Text>
+        <Text style={[styles.subtitle, isDarkMode && { color: '#ccc' }]}>Connecting refugees with support services</Text>
 
-      <View style={styles.tabContainer}>
-        <TouchableOpacity onPress={() => setMode('login')} style={[styles.tab, mode === 'login' && styles.activeTabBackground]}>
-          <Text style={[styles.tabText, mode === 'login' && styles.activeTabText]}>Login</Text>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => setMode('register')} style={[styles.tab, mode === 'register' && styles.activeTabBackground]}>
-          <Text style={[styles.tabText, mode === 'register' && styles.activeTabText]}>Register</Text>
-        </TouchableOpacity>
-      </View>
-
-      {mode === 'login' ? (
-        <View style={styles.form}>
-          <Text style={styles.label}>Email</Text>
-          <TextInput placeholder="name@example.com" style={styles.input} value={loginEmail} onChangeText={setLoginEmail} keyboardType="email-address" autoCapitalize="none" />
-          <Text style={styles.label}>Password</Text>
-          <TextInput placeholder="••••••••" secureTextEntry style={styles.input} value={loginPassword} onChangeText={setLoginPassword} />
-          <TouchableOpacity onPress={handleLogin} style={styles.button} disabled={isLoading}>
-            {isLoading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Sign in</Text>}
+        <View style={styles.tabContainer}>
+          <TouchableOpacity 
+            onPress={() => {
+              setMode('login');
+              setErrors({});
+            }} 
+            style={[styles.tab, mode === 'login' && styles.activeTabBackground]}
+          >
+            <Text style={[styles.tabText, mode === 'login' && styles.activeTabText]}>Login</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            onPress={() => {
+              setMode('register');
+              setErrors({});
+            }} 
+            style={[styles.tab, mode === 'register' && styles.activeTabBackground]}
+          >
+            <Text style={[styles.tabText, mode === 'register' && styles.activeTabText]}>Register</Text>
           </TouchableOpacity>
         </View>
-      ) : (
-        <View style={styles.form}>
-          <Text style={styles.label}>Full Name</Text>
-          <TextInput placeholder="John Doe" style={styles.input} value={registerName} onChangeText={setRegisterName} />
-          <Text style={styles.label}>Email</Text>
-          <TextInput placeholder="name@example.com" style={styles.input} value={registerEmail} onChangeText={setRegisterEmail} keyboardType="email-address" autoCapitalize="none" />
-          <Text style={styles.label}>Password</Text>
-          <TextInput placeholder="••••••••" secureTextEntry style={styles.input} value={registerPassword} onChangeText={setRegisterPassword} />
 
-          <Text style={styles.label}>Select Role</Text>
-          <View style={styles.roleContainer}>
-            <TouchableOpacity onPress={() => setRole('refugee')} style={[styles.roleOption, role === 'refugee' && styles.selectedRole]}>
-              <Text style={styles.roleText}>Refugee</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => setRole('ngo')} style={[styles.roleOption, role === 'ngo' && styles.selectedRole]}>
-              <Text style={styles.roleText}>NGO</Text>
+        {mode === 'login' ? (
+          <View style={styles.form}>
+            <View style={styles.inputGroup}>
+              <Text style={[styles.label, isDarkMode && { color: '#fff' }]}>Email</Text>
+              <TextInput 
+                placeholder="name@example.com" 
+                style={[
+                  styles.input, 
+                  errors.loginEmail && styles.inputError,
+                  isDarkMode && styles.inputDark
+                ]} 
+                value={loginEmail} 
+                onChangeText={(text) => {
+                  setLoginEmail(text);
+                  if (errors.loginEmail) {
+                    setErrors(prev => ({ ...prev, loginEmail: '' }));
+                  }
+                }} 
+                keyboardType="email-address" 
+                autoCapitalize="none"
+                {...(isWeb && { autoComplete: 'email' })}
+              />
+              {errors.loginEmail && <Text style={styles.errorText}>{errors.loginEmail}</Text>}
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={[styles.label, isDarkMode && { color: '#fff' }]}>Password</Text>
+              <TextInput 
+                placeholder="••••••••" 
+                secureTextEntry 
+                style={[
+                  styles.input, 
+                  errors.loginPassword && styles.inputError,
+                  isDarkMode && styles.inputDark
+                ]} 
+                value={loginPassword} 
+                onChangeText={(text) => {
+                  setLoginPassword(text);
+                  if (errors.loginPassword) {
+                    setErrors(prev => ({ ...prev, loginPassword: '' }));
+                  }
+                }}
+                {...(isWeb && { autoComplete: 'current-password' })}
+              />
+              {errors.loginPassword && <Text style={styles.errorText}>{errors.loginPassword}</Text>}
+            </View>
+
+            <TouchableOpacity 
+              onPress={handleLogin} 
+              style={[styles.button, isLoading && styles.buttonDisabled]} 
+              disabled={isLoading}
+            >
+              {isLoading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Sign in</Text>}
             </TouchableOpacity>
           </View>
+        ) : (
+          <View style={styles.form}>
+            <View style={styles.inputGroup}>
+              <Text style={[styles.label, isDarkMode && { color: '#fff' }]}>Full Name</Text>
+              <TextInput 
+                placeholder="John Doe" 
+                style={[
+                  styles.input, 
+                  errors.registerName && styles.inputError,
+                  isDarkMode && styles.inputDark
+                ]} 
+                value={registerName} 
+                onChangeText={(text) => {
+                  setRegisterName(text);
+                  if (errors.registerName) {
+                    setErrors(prev => ({ ...prev, registerName: '' }));
+                  }
+                }}
+                {...(isWeb && { autoComplete: 'name' })}
+              />
+              {errors.registerName && <Text style={styles.errorText}>{errors.registerName}</Text>}
+            </View>
 
-          <TouchableOpacity onPress={handleRegister} style={styles.button} disabled={isLoading}>
-            {isLoading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Create account</Text>}
-          </TouchableOpacity>
-        </View>
-      )}
+            <View style={styles.inputGroup}>
+              <Text style={[styles.label, isDarkMode && { color: '#fff' }]}>Email</Text>
+              <TextInput 
+                placeholder="name@example.com" 
+                style={[
+                  styles.input, 
+                  errors.registerEmail && styles.inputError,
+                  isDarkMode && styles.inputDark
+                ]} 
+                value={registerEmail} 
+                onChangeText={(text) => {
+                  setRegisterEmail(text);
+                  if (errors.registerEmail) {
+                    setErrors(prev => ({ ...prev, registerEmail: '' }));
+                  }
+                }} 
+                keyboardType="email-address" 
+                autoCapitalize="none"
+                {...(isWeb && { autoComplete: 'email' })}
+              />
+              {errors.registerEmail && <Text style={styles.errorText}>{errors.registerEmail}</Text>}
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={[styles.label, isDarkMode && { color: '#fff' }]}>Password</Text>
+              <TextInput 
+                placeholder="••••••••" 
+                secureTextEntry 
+                style={[
+                  styles.input, 
+                  errors.registerPassword && styles.inputError,
+                  isDarkMode && styles.inputDark
+                ]} 
+                value={registerPassword} 
+                onChangeText={(text) => {
+                  setRegisterPassword(text);
+                  if (errors.registerPassword) {
+                    setErrors(prev => ({ ...prev, registerPassword: '' }));
+                  }
+                }}
+                {...(isWeb && { autoComplete: 'new-password' })}
+              />
+              {errors.registerPassword && <Text style={styles.errorText}>{errors.registerPassword}</Text>}
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={[styles.label, isDarkMode && { color: '#fff' }]}>Select Role</Text>
+              <View style={styles.roleContainer}>
+                <TouchableOpacity 
+                  onPress={() => setRole('refugee')} 
+                  style={[styles.roleOption, role === 'refugee' && styles.selectedRole]}
+                >
+                  <Text style={[styles.roleText, role === 'refugee' && styles.selectedRoleText]}>Refugee</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  onPress={() => setRole('ngo')} 
+                  style={[styles.roleOption, role === 'ngo' && styles.selectedRole]}
+                >
+                  <Text style={[styles.roleText, role === 'ngo' && styles.selectedRoleText]}>NGO</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            <TouchableOpacity 
+              onPress={handleRegister} 
+              style={[styles.button, isLoading && styles.buttonDisabled]} 
+              disabled={isLoading}
+            >
+              {isLoading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Create account</Text>}
+            </TouchableOpacity>
+          </View>
+        )}
+      </View>
     </ScrollView>
   );
 }
@@ -136,23 +367,177 @@ const styles = StyleSheet.create({
     paddingTop: 60,
     backgroundColor: '#fff',
     minHeight: '100%',
+    ...(isWeb && {
+      minHeight: '100vh',
+      maxWidth: 500,
+      marginHorizontal: 'auto',
+      width: '100%',
+      paddingTop: 40,
+    }),
   },
-  iconContainer: { alignItems: 'center', marginBottom: 16 },
-  iconCircle: { backgroundColor: '#e6f0ff', padding: 12, borderRadius: 999 },
-  icon: { fontSize: 32, color: '#007bff' },
-  title: { fontSize: 24, fontWeight: 'bold', textAlign: 'center', marginBottom: 30 },
-  tabContainer: { flexDirection: 'row', justifyContent: 'center', marginBottom: 24, backgroundColor: '#f0f0f0', borderRadius: 12 },
-  tab: { flex: 1, paddingVertical: 12, alignItems: 'center', borderRadius: 12 },
-  activeTabBackground: { backgroundColor: '#e6f0ff' },
-  tabText: { fontSize: 16, color: '#6c757d', fontWeight: '600' },
-  activeTabText: { color: '#007bff' },
-  label: { marginBottom: 6, fontWeight: '500', color: '#212529' },
-  form: { marginBottom: 30 },
-  input: { backgroundColor: '#fff', padding: 12, borderRadius: 8, marginBottom: 12, borderWidth: 1, borderColor: '#ced4da', fontSize: 16 },
-  button: { backgroundColor: '#cce0ff', padding: 14, borderRadius: 8, alignItems: 'center' },
-  buttonText: { color: '#007bff', fontWeight: 'bold', fontSize: 16 },
-  roleContainer: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12, gap: 12 },
-  roleOption: { flex: 1, padding: 10, borderWidth: 1, borderColor: '#ced4da', borderRadius: 8, alignItems: 'center' },
-  selectedRole: { backgroundColor: '#e6f0ff', borderColor: '#007bff' },
-  roleText: { fontSize: 14, fontWeight: '500' },
+  contentWrapper: {
+    ...(isWeb && {
+      maxWidth: 400,
+      marginHorizontal: 'auto',
+    }),
+  },
+  iconContainer: { 
+    alignItems: 'center', 
+    marginBottom: 16 
+  },
+  iconCircle: { 
+    backgroundColor: '#e6f0ff', 
+    padding: 12, 
+    borderRadius: 999 
+  },
+  icon: { 
+    fontSize: 32, 
+    color: '#007bff' 
+  },
+  title: { 
+    fontSize: isWeb ? 28 : 24, 
+    fontWeight: 'bold', 
+    textAlign: 'center', 
+    marginBottom: 8 
+  },
+  subtitle: {
+    fontSize: isWeb ? 14 : 12,
+    textAlign: 'center',
+    color: '#666',
+    marginBottom: 30,
+  },
+  tabContainer: { 
+    flexDirection: 'row', 
+    justifyContent: 'center', 
+    marginBottom: 24, 
+    backgroundColor: '#f0f0f0', 
+    borderRadius: 12 
+  },
+  tab: { 
+    flex: 1, 
+    paddingVertical: 12, 
+    alignItems: 'center', 
+    borderRadius: 12,
+    ...(isWeb && {
+      cursor: 'pointer',
+      transition: 'all 0.2s ease',
+    }),
+  },
+  activeTabBackground: { 
+    backgroundColor: '#e6f0ff' 
+  },
+  tabText: { 
+    fontSize: 16, 
+    color: '#6c757d', 
+    fontWeight: '600' 
+  },
+  activeTabText: { 
+    color: '#007bff' 
+  },
+  label: { 
+    marginBottom: 6, 
+    fontWeight: '500', 
+    color: '#212529' 
+  },
+  form: { 
+    marginBottom: 30 
+  },
+  inputGroup: {
+    marginBottom: 16,
+  },
+  input: { 
+    backgroundColor: '#fff', 
+    padding: 12, 
+    borderRadius: 8, 
+    borderWidth: 1, 
+    borderColor: '#ced4da', 
+    fontSize: 16,
+    ...(isWeb && {
+      outline: 'none',
+      transition: 'border-color 0.2s ease',
+      '&:focus': {
+        borderColor: '#007bff',
+      },
+    }),
+  },
+  inputError: {
+    borderColor: '#dc3545',
+    ...(isWeb && {
+      '&:focus': {
+        borderColor: '#dc3545',
+      },
+    }),
+  },
+  inputDark: {
+    backgroundColor: '#2d2d2d',
+    borderColor: '#555',
+    color: '#fff',
+  },
+  errorText: {
+    color: '#dc3545',
+    fontSize: 12,
+    marginTop: 4,
+    marginLeft: 4,
+  },
+  button: { 
+    backgroundColor: '#007bff', 
+    padding: 14, 
+    borderRadius: 8, 
+    alignItems: 'center',
+    ...(isWeb && {
+      cursor: 'pointer',
+      transition: 'background-color 0.2s ease',
+      '&:hover': {
+        backgroundColor: '#0056b3',
+      },
+    }),
+  },
+  buttonDisabled: {
+    backgroundColor: '#6c757d',
+    ...(isWeb && {
+      cursor: 'not-allowed',
+      '&:hover': {
+        backgroundColor: '#6c757d',
+      },
+    }),
+  },
+  buttonText: { 
+    color: '#fff', 
+    fontWeight: 'bold', 
+    fontSize: 16 
+  },
+  roleContainer: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    marginBottom: 12, 
+    gap: 12 
+  },
+  roleOption: { 
+    flex: 1, 
+    padding: 10, 
+    borderWidth: 1, 
+    borderColor: '#ced4da', 
+    borderRadius: 8, 
+    alignItems: 'center',
+    ...(isWeb && {
+      cursor: 'pointer',
+      transition: 'all 0.2s ease',
+      '&:hover': {
+        borderColor: '#007bff',
+        backgroundColor: '#f8f9fa',
+      },
+    }),
+  },
+  selectedRole: { 
+    backgroundColor: '#e6f0ff', 
+    borderColor: '#007bff' 
+  },
+  roleText: { 
+    fontSize: 14, 
+    fontWeight: '500' 
+  },
+  selectedRoleText: {
+    color: '#007bff',
+    fontWeight: '600',
+  },
 });

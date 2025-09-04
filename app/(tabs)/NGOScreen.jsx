@@ -2,17 +2,17 @@ import { useNavigation } from '@react-navigation/native';
 import { collection, getDocs } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    Dimensions,
-    FlatList,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View
+  ActivityIndicator,
+  Alert,
+  Dimensions,
+  FlatList,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { db } from '../../config/firebase';
 
@@ -48,10 +48,7 @@ const NGOCard = ({ ngo, onPress }) => {
           <Text style={styles.statNumber}>{ngo.eventsCount || 0}</Text>
           <Text style={styles.statLabel}>Events</Text>
         </View>
-        <View style={styles.statItem}>
-          <Text style={styles.statNumber}>{ngo.volunteersCount || 0}</Text>
-          <Text style={styles.statLabel}>Volunteers</Text>
-        </View>
+      
         <View style={styles.statItem}>
           <Text style={styles.statNumber}>{ngo.establishedYear || 'N/A'}</Text>
           <Text style={styles.statLabel}>Established</Text>
@@ -85,102 +82,7 @@ const NGOScreen = () => {
     try {
       setLoading(true);
       
-      // Sample NGO data for demonstration
-      const sampleNGOs = [
-        {
-          id: '1',
-          name: 'Hong Kong Red Cross',
-          type: 'Humanitarian Organization',
-          description: 'Hong Kong Red Cross has been serving the community for over 100 years, providing humanitarian services and educational programs. We offer various skill-building workshops and training programs for refugees and asylum seekers.',
-          location: 'Hong Kong',
-          contact: '+852 2802 0021',
-          email: 'info@redcross.org.hk',
-          website: 'https://www.redcross.org.hk',
-          establishedYear: '1950',
-          volunteersCount: 150,
-          services: ['Education', 'Health & Wellbeing', 'Emergency Relief'],
-          languages: ['English', 'Cantonese', 'Mandarin'],
-          eventsCount: 5
-        },
-        {
-          id: '2',
-          name: 'Caritas Hong Kong',
-          type: 'Catholic Social Service',
-          description: 'Caritas Hong Kong is committed to serving the community through various social services, education programs, and support for vulnerable groups including refugees and asylum seekers.',
-          location: 'Hong Kong',
-          contact: '+852 2843 4646',
-          email: 'info@caritas.org.hk',
-          website: 'https://www.caritas.org.hk',
-          establishedYear: '1953',
-          volunteersCount: 200,
-          services: ['Education', 'Legal Support', 'Community Services'],
-          languages: ['English', 'Cantonese', 'Mandarin', 'Urdu'],
-          eventsCount: 3
-        },
-        {
-          id: '3',
-          name: 'Christian Action',
-          type: 'Christian NGO',
-          description: 'Christian Action provides comprehensive support services for refugees, asylum seekers, and other vulnerable communities. We offer language classes, job training, and social integration programs.',
-          location: 'Hong Kong',
-          contact: '+852 2382 6363',
-          email: 'info@christian-action.org.hk',
-          website: 'https://www.christian-action.org.hk',
-          establishedYear: '1985',
-          volunteersCount: 80,
-          services: ['Education', 'Job Skills', 'Legal Support'],
-          languages: ['English', 'Cantonese', 'Mandarin', 'Arabic', 'Urdu'],
-          eventsCount: 7
-        },
-        {
-          id: '4',
-          name: 'YMCA Hong Kong',
-          type: 'Youth Organization',
-          description: 'YMCA Hong Kong focuses on youth development and community services. We provide educational programs, skill-building workshops, and recreational activities for people of all ages.',
-          location: 'Hong Kong',
-          contact: '+852 2783 3377',
-          email: 'info@ymcahk.org.hk',
-          website: 'https://www.ymcahk.org.hk',
-          establishedYear: '1901',
-          volunteersCount: 300,
-          services: ['Education', 'Youth Development', 'Community Services'],
-          languages: ['English', 'Cantonese', 'Mandarin'],
-          eventsCount: 4
-        },
-        {
-          id: '5',
-          name: 'Salvation Army Hong Kong',
-          type: 'Christian Charity',
-          description: 'The Salvation Army provides comprehensive social services including emergency assistance, education programs, and community support for those in need, including refugees and asylum seekers.',
-          location: 'Hong Kong',
-          contact: '+852 2332 4433',
-          email: 'info@salvationarmy.org.hk',
-          website: 'https://www.salvationarmy.org.hk',
-          establishedYear: '1930',
-          volunteersCount: 120,
-          services: ['Emergency Relief', 'Education', 'Community Support'],
-          languages: ['English', 'Cantonese', 'Mandarin', 'French'],
-          eventsCount: 2
-        },
-        {
-          id: '6',
-          name: 'World Vision Hong Kong',
-          type: 'International NGO',
-          description: 'World Vision Hong Kong works to transform lives through development programs, emergency relief, and advocacy. We focus on child protection, education, and community development.',
-          location: 'Hong Kong',
-          contact: '+852 2394 2394',
-          email: 'info@worldvision.org.hk',
-          website: 'https://www.worldvision.org.hk',
-          establishedYear: '1982',
-          volunteersCount: 90,
-          services: ['Education', 'Child Protection', 'Community Development'],
-          languages: ['English', 'Cantonese', 'Mandarin', 'Somali'],
-          eventsCount: 6
-        }
-      ];
-
-      // Try to fetch from Firebase first, fallback to sample data
-      try {
+      // Fetch from Firebase
         const ngoSnapshot = await getDocs(collection(db, 'ngos'));
         const ngoList = ngoSnapshot.docs.map(doc => ({
           id: doc.id,
@@ -205,10 +107,21 @@ const NGOScreen = () => {
           eventsCount: ngoEventCounts[ngo.name] || 0
         }));
 
-        setNgos(ngoListWithCounts.length > 0 ? ngoListWithCounts : sampleNGOs);
-      } catch (firebaseError) {
-        console.log('Using sample data due to Firebase error:', firebaseError.message);
-        setNgos(sampleNGOs);
+      // If we have NGO profiles from the database, use them
+      if (ngoListWithCounts.length > 0) {
+        setNgos(ngoListWithCounts);
+      } else {
+        // Try to fetch from ngoProfiles collection as well
+        const profileSnapshot = await getDocs(collection(db, 'ngoProfiles'));
+        const profileList = profileSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+          type: 'NGO',
+          volunteersCount: 0,
+          eventsCount: 0
+        }));
+
+        setNgos(profileList);
       }
     } catch (error) {
       console.error('Error fetching NGOs:', error);
