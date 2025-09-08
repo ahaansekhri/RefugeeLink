@@ -4,19 +4,19 @@ import { addDoc, collection, doc, getDoc } from "firebase/firestore";
 import React, { useEffect, useState } from "react";
 import { useAuthState } from 'react-firebase-hooks/auth';
 import {
-    ActivityIndicator,
-    Alert,
-    KeyboardAvoidingView,
-    Modal,
-    PermissionsAndroid,
-    Picker,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  KeyboardAvoidingView,
+  Modal,
+  PermissionsAndroid,
+  Picker,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { auth, db } from "../../config/firebase";
 
@@ -101,7 +101,7 @@ const NGOEventForm = () => {
         const profileData = profileSnap.data();
         setEventData(prev => ({
           ...prev,
-          ngoName: profileData.ngoName || '',
+          ngoName: profileData.name || '',
           ngoInfo: profileData.description || '',
           ngoContact: profileData.contact || '',
         }));
@@ -327,6 +327,47 @@ const NGOEventForm = () => {
     return true;
   };
 
+  const resetForm = () => {
+    // Reset form data
+    setEventData({
+      name: "",
+      date: "",
+      time: "",
+      duration: "",
+      durationHours: 1,
+      durationMinutes: 0,
+      slots: 1,
+      location: "",
+      ngoName: "",
+      description: "",
+      materials: "",
+      clientGroup: [],
+      languages: [],
+      activityType: "",
+      district: "",
+      transport: "",
+      difficulty: "Beginner",
+      ngoInfo: "",
+      ngoContact: "",
+      enrolledCount: 0,
+      registeredUsers: [],
+    });
+
+    // Reset picker states
+    setShowDatePicker(false);
+    setShowTimePicker(false);
+    setShowSlotsPicker(false);
+    setShowHoursPicker(false);
+    setShowMinutesPicker(false);
+    setSelectedDate(new Date());
+    setSelectedTime(new Date());
+
+    // Refresh NGO profile data
+    if (user) {
+      checkProfile();
+    }
+  };
+
   const handleSubmit = async () => {
     // Check if user has profile first
     if (!hasProfile) {
@@ -350,30 +391,10 @@ const NGOEventForm = () => {
       // Show success modal
       setShowSuccessModal(true);
       
-      // Reset form
-      setEventData({
-        name: "",
-        date: "",
-        time: "",
-        duration: "",
-        durationHours: 1,
-        durationMinutes: 0,
-        slots: 1,
-        location: "",
-        ngoName: "",
-        description: "",
-        materials: "",
-        clientGroup: [],
-        languages: [],
-        activityType: "",
-        district: "",
-        transport: "",
-        difficulty: "Beginner",
-        ngoInfo: "",
-        ngoContact: "",
-        enrolledCount: 0,
-        registeredUsers: [],
-      });
+      // Reset form after a short delay to allow modal to show
+      setTimeout(() => {
+        resetForm();
+      }, 100);
     } catch (error) {
       Alert.alert("Error", error.message);
     }
@@ -408,12 +429,12 @@ const NGOEventForm = () => {
           />
           <View style={styles.readOnlyContainer}>
             <Text style={styles.readOnlyLabel}>NGO Name *</Text>
-          <TextInput 
+            <TextInput 
               style={[styles.input, styles.readOnlyInput]} 
-            value={eventData.ngoName} 
+              value={eventData.ngoName || (profileLoading ? "Loading from profile..." : "No profile found")} 
               editable={false}
               placeholder="Loading from profile..."
-          />
+            />
           </View>
           <TextInput 
             style={[styles.input, { height: 80 }]} 
@@ -558,22 +579,22 @@ const NGOEventForm = () => {
           <Text style={styles.sectionTitle}>NGO Information</Text>
           <View style={styles.readOnlyContainer}>
             <Text style={styles.readOnlyLabel}>NGO Description</Text>
-          <TextInput 
+            <TextInput 
               style={[styles.input, styles.readOnlyInput, { height: 80 }]} 
               placeholder="Loading from profile..." 
-            multiline 
-            value={eventData.ngoInfo} 
+              multiline 
+              value={eventData.ngoInfo || (profileLoading ? "Loading from profile..." : "No profile found")} 
               editable={false}
-          />
+            />
           </View>
           <View style={styles.readOnlyContainer}>
             <Text style={styles.readOnlyLabel}>NGO Contact</Text>
-          <TextInput 
+            <TextInput 
               style={[styles.input, styles.readOnlyInput]} 
               placeholder="Loading from profile..." 
-            value={eventData.ngoContact} 
+              value={eventData.ngoContact || (profileLoading ? "Loading from profile..." : "No profile found")} 
               editable={false}
-          />
+            />
           </View>
         </View>
 
@@ -772,7 +793,10 @@ const NGOEventForm = () => {
           </Text>
           <TouchableOpacity 
             style={styles.successButton} 
-            onPress={() => setShowSuccessModal(false)}
+            onPress={() => {
+              setShowSuccessModal(false);
+              resetForm();
+            }}
           >
             <Text style={styles.successButtonText}>Continue</Text>
           </TouchableOpacity>

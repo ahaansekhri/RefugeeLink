@@ -1,25 +1,25 @@
 import {
-    arrayUnion,
-    collection,
-    doc,
-    getDoc,
-    getDocs,
-    increment,
-    updateDoc,
+  arrayUnion,
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  increment,
+  updateDoc,
 } from "firebase/firestore";
 import React, { useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Dimensions,
-    FlatList,
-    Modal,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View
+  ActivityIndicator,
+  Alert,
+  Dimensions,
+  FlatList,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from "react-native";
 import { auth, db } from "../../config/firebase";
 
@@ -82,6 +82,9 @@ const EventCard = ({ event, onPress }) => {
           <Text style={[styles.detailText, isCompleted && styles.completedDetail]}>👥 {event.enrolledCount || 0}/{event.slots} enrolled</Text>
           <Text style={[styles.detailText, isCompleted && styles.completedDetail]}>🌐 {event.languages?.join(", ") || 'English'}</Text>
           <Text style={[styles.detailText, isCompleted && styles.completedDetail]}>🎯 {event.clientGroup?.join(", ") || 'General Public'}</Text>
+          {event.transport && (
+            <Text style={[styles.detailText, isCompleted && styles.completedDetail]}>🚌 {event.transport}</Text>
+          )}
         </View>
         
         <Text style={[styles.briefDesc, isCompleted && styles.completedDesc]}>
