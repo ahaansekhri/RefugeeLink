@@ -406,12 +406,15 @@ const NGOEventForm = () => {
             value={eventData.name} 
             onChangeText={(v) => handleChange("name", v)} 
           />
+          <View style={styles.readOnlyContainer}>
+            <Text style={styles.readOnlyLabel}>NGO Name *</Text>
           <TextInput 
-            style={styles.input} 
-            placeholder="NGO Name *" 
+              style={[styles.input, styles.readOnlyInput]} 
             value={eventData.ngoName} 
-            onChangeText={(v) => handleChange("ngoName", v)} 
+              editable={false}
+              placeholder="Loading from profile..."
           />
+          </View>
           <TextInput 
             style={[styles.input, { height: 80 }]} 
             placeholder="Activity Description *" 
@@ -553,19 +556,25 @@ const NGOEventForm = () => {
         {/* NGO Information */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>NGO Information</Text>
+          <View style={styles.readOnlyContainer}>
+            <Text style={styles.readOnlyLabel}>NGO Description</Text>
           <TextInput 
-            style={[styles.input, { height: 80 }]} 
-            placeholder="NGO Description" 
+              style={[styles.input, styles.readOnlyInput, { height: 80 }]} 
+              placeholder="Loading from profile..." 
             multiline 
             value={eventData.ngoInfo} 
-            onChangeText={(v) => handleChange("ngoInfo", v)} 
+              editable={false}
           />
+          </View>
+          <View style={styles.readOnlyContainer}>
+            <Text style={styles.readOnlyLabel}>NGO Contact</Text>
           <TextInput 
-            style={styles.input} 
-            placeholder="NGO Contact (e.g. +852 2802 0021)" 
+              style={[styles.input, styles.readOnlyInput]} 
+              placeholder="Loading from profile..." 
             value={eventData.ngoContact} 
-            onChangeText={(v) => handleChange("ngoContact", v)} 
+              editable={false}
           />
+          </View>
         </View>
 
         {/* Client Groups */}
@@ -1183,5 +1192,21 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#fff",
     fontWeight: "bold",
+  },
+
+  // Read-only Field Styles
+  readOnlyContainer: {
+    marginBottom: 12,
+  },
+  readOnlyLabel: {
+    fontSize: 14,
+    fontWeight: "500",
+    marginBottom: 6,
+    color: "#666",
+  },
+  readOnlyInput: {
+    backgroundColor: "#f8f9fa",
+    borderColor: "#e9ecef",
+    color: "#495057",
   },
 });
