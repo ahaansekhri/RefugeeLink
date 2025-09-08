@@ -171,9 +171,21 @@ export default function AuthPage() {
     <ScrollView 
       contentContainerStyle={[styles.container, isDarkMode && { backgroundColor: '#121212' }]} 
       keyboardShouldPersistTaps="handled"
+      showsVerticalScrollIndicator={!isWeb}
       {...(isWeb && {
-        style: { minHeight: '100vh' },
-        contentContainerStyle: [styles.container, isDarkMode && { backgroundColor: '#121212' }, { minHeight: '100vh' }]
+        style: { 
+          minHeight: '100vh',
+          width: '100%',
+        },
+        contentContainerStyle: [
+          styles.container, 
+          isDarkMode && { backgroundColor: '#121212' }, 
+          { 
+            minHeight: '100vh',
+            justifyContent: 'center',
+            alignItems: 'center',
+          }
+        ]
       })}
     >
       <View style={styles.contentWrapper}>
@@ -369,65 +381,122 @@ const styles = StyleSheet.create({
     minHeight: '100%',
     ...(isWeb && {
       minHeight: '100vh',
-      maxWidth: 500,
+      maxWidth: 480,
       marginHorizontal: 'auto',
       width: '100%',
-      paddingTop: 40,
+      paddingTop: 24,
+      paddingLeft: 20,
+      paddingRight: 20,
+      // Responsive breakpoints
+      '@media (max-width: 768px)': {
+        maxWidth: '100%',
+        paddingLeft: 16,
+        paddingRight: 16,
+        paddingTop: 16,
+      },
+      '@media (min-width: 1200px)': {
+        maxWidth: 420,
+        paddingTop: 32,
+      },
     }),
   },
   contentWrapper: {
     ...(isWeb && {
-      maxWidth: 400,
+      maxWidth: 380,
       marginHorizontal: 'auto',
+      width: '100%',
+      // Responsive adjustments
+      '@media (max-width: 768px)': {
+        maxWidth: '100%',
+        paddingLeft: 0,
+        paddingRight: 0,
+      },
+      '@media (min-width: 1200px)': {
+        maxWidth: 360,
+      },
     }),
   },
   iconContainer: { 
     alignItems: 'center', 
-    marginBottom: 16 
+    marginBottom: isWeb ? 12 : 16 
   },
   iconCircle: { 
     backgroundColor: '#e6f0ff', 
-    padding: 12, 
+    padding: isWeb ? 8 : 12, 
     borderRadius: 999 
   },
   icon: { 
-    fontSize: 32, 
+    fontSize: isWeb ? 24 : 32, 
     color: '#007bff' 
   },
   title: { 
-    fontSize: isWeb ? 28 : 24, 
+    fontSize: isWeb ? 24 : 24, 
     fontWeight: 'bold', 
     textAlign: 'center', 
-    marginBottom: 8 
+    marginBottom: isWeb ? 6 : 8,
+    ...(isWeb && {
+      '@media (max-width: 768px)': {
+        fontSize: 22,
+      },
+      '@media (min-width: 1200px)': {
+        fontSize: 26,
+      },
+    }),
   },
   subtitle: {
-    fontSize: isWeb ? 14 : 12,
+    fontSize: isWeb ? 13 : 12,
     textAlign: 'center',
     color: '#666',
-    marginBottom: 30,
+    marginBottom: isWeb ? 20 : 30,
+    lineHeight: isWeb ? 18 : 18,
+    ...(isWeb && {
+      '@media (max-width: 768px)': {
+        fontSize: 12,
+        lineHeight: 16,
+        marginBottom: 16,
+      },
+      '@media (min-width: 1200px)': {
+        fontSize: 14,
+        lineHeight: 20,
+        marginBottom: 24,
+      },
+    }),
   },
   tabContainer: { 
     flexDirection: 'row', 
     justifyContent: 'center', 
-    marginBottom: 24, 
+    marginBottom: isWeb ? 16 : 24, 
     backgroundColor: '#f0f0f0', 
-    borderRadius: 12 
+    borderRadius: 12,
+    ...(isWeb && {
+      '@media (max-width: 768px)': {
+        marginBottom: 14,
+      },
+    }),
   },
   tab: { 
     flex: 1, 
-    paddingVertical: 12, 
+    paddingVertical: isWeb ? 10 : 12, 
     alignItems: 'center', 
     borderRadius: 12,
+    minHeight: isWeb ? 40 : 44,
     ...(isWeb && {
       cursor: 'pointer',
       transition: 'all 0.2s ease',
+      '&:hover': {
+        backgroundColor: 'rgba(0, 123, 255, 0.1)',
+      },
+      '@media (max-width: 768px)': {
+        paddingVertical: 10,
+        minHeight: 40,
+      },
     }),
   },
   activeTabBackground: { 
     backgroundColor: '#e6f0ff' 
   },
   tabText: { 
-    fontSize: 16, 
+    fontSize: isWeb ? 14 : 16, 
     color: '#6c757d', 
     fontWeight: '600' 
   },
@@ -435,28 +504,48 @@ const styles = StyleSheet.create({
     color: '#007bff' 
   },
   label: { 
-    marginBottom: 6, 
+    marginBottom: isWeb ? 4 : 6, 
     fontWeight: '500', 
-    color: '#212529' 
+    color: '#212529',
+    fontSize: isWeb ? 13 : 14
   },
   form: { 
-    marginBottom: 30 
+    marginBottom: isWeb ? 20 : 30,
+    ...(isWeb && {
+      width: '100%',
+      '@media (max-width: 768px)': {
+        marginBottom: 16,
+      },
+    }),
   },
   inputGroup: {
-    marginBottom: 16,
+    marginBottom: isWeb ? 14 : 16,
+    ...(isWeb && {
+      '@media (max-width: 768px)': {
+        marginBottom: 12,
+      },
+    }),
   },
   input: { 
     backgroundColor: '#fff', 
-    padding: 12, 
+    padding: isWeb ? 12 : 12, 
     borderRadius: 8, 
     borderWidth: 1, 
     borderColor: '#ced4da', 
-    fontSize: 16,
+    fontSize: isWeb ? 14 : 16,
+    minHeight: isWeb ? 40 : 44,
     ...(isWeb && {
       outline: 'none',
-      transition: 'border-color 0.2s ease',
+      transition: 'all 0.2s ease',
+      width: '100%',
+      boxSizing: 'border-box',
       '&:focus': {
         borderColor: '#007bff',
+        boxShadow: '0 0 0 3px rgba(0, 123, 255, 0.1)',
+      },
+      '@media (max-width: 768px)': {
+        padding: 12,
+        minHeight: 40,
       },
     }),
   },
@@ -481,14 +570,26 @@ const styles = StyleSheet.create({
   },
   button: { 
     backgroundColor: '#007bff', 
-    padding: 14, 
+    padding: isWeb ? 12 : 14, 
     borderRadius: 8, 
     alignItems: 'center',
+    minHeight: isWeb ? 44 : 48,
     ...(isWeb && {
       cursor: 'pointer',
-      transition: 'background-color 0.2s ease',
+      transition: 'all 0.2s ease',
+      width: '100%',
+      boxSizing: 'border-box',
       '&:hover': {
         backgroundColor: '#0056b3',
+        transform: 'translateY(-1px)',
+        boxShadow: '0 4px 12px rgba(0, 123, 255, 0.3)',
+      },
+      '&:active': {
+        transform: 'translateY(0)',
+      },
+      '@media (max-width: 768px)': {
+        padding: 12,
+        minHeight: 44,
       },
     }),
   },
@@ -504,27 +605,38 @@ const styles = StyleSheet.create({
   buttonText: { 
     color: '#fff', 
     fontWeight: 'bold', 
-    fontSize: 16 
+    fontSize: isWeb ? 14 : 16 
   },
   roleContainer: { 
     flexDirection: 'row', 
     justifyContent: 'space-between', 
-    marginBottom: 12, 
-    gap: 12 
+    marginBottom: isWeb ? 8 : 12, 
+    gap: isWeb ? 12 : 12,
+    ...(isWeb && {
+      '@media (max-width: 768px)': {
+        gap: 10,
+      },
+    }),
   },
   roleOption: { 
     flex: 1, 
-    padding: 10, 
+    padding: isWeb ? 10 : 10, 
     borderWidth: 1, 
     borderColor: '#ced4da', 
     borderRadius: 8, 
     alignItems: 'center',
+    minHeight: isWeb ? 40 : 44,
     ...(isWeb && {
       cursor: 'pointer',
       transition: 'all 0.2s ease',
       '&:hover': {
         borderColor: '#007bff',
         backgroundColor: '#f8f9fa',
+        transform: 'translateY(-1px)',
+      },
+      '@media (max-width: 768px)': {
+        padding: 8,
+        minHeight: 40,
       },
     }),
   },
@@ -533,7 +645,7 @@ const styles = StyleSheet.create({
     borderColor: '#007bff' 
   },
   roleText: { 
-    fontSize: 14, 
+    fontSize: isWeb ? 12 : 14, 
     fontWeight: '500' 
   },
   selectedRoleText: {

@@ -1,25 +1,25 @@
 import {
-  arrayUnion,
-  collection,
-  doc,
-  getDoc,
-  getDocs,
-  increment,
-  updateDoc,
+    arrayUnion,
+    collection,
+    doc,
+    getDoc,
+    getDocs,
+    increment,
+    updateDoc,
 } from "firebase/firestore";
 import React, { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  Dimensions,
-  FlatList,
-  Modal,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View
+    ActivityIndicator,
+    Alert,
+    Dimensions,
+    FlatList,
+    Modal,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View
 } from "react-native";
 import { auth, db } from "../../config/firebase";
 
@@ -77,6 +77,7 @@ const EventCard = ({ event, onPress }) => {
 const EventList = () => {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [showFilters, setShowFilters] = useState(false);
@@ -88,23 +89,36 @@ const EventList = () => {
     transport: "",
   });
 
-  useEffect(() => {
-    const fetchEvents = async () => {
-      try {
-        const snapshot = await getDocs(collection(db, "events"));
-        const eventList = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
-        setEvents(eventList);
-      } catch (error) {
-        console.log("Error fetching events:", error);
-      } finally {
-        setLoading(false);
+  const fetchEvents = async (isRefresh = false) => {
+    try {
+      if (isRefresh) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
       }
-    };
+      
+      const snapshot = await getDocs(collection(db, "events"));
+      const eventList = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setEvents(eventList);
+    } catch (error) {
+      console.log("Error fetching events:", error);
+      Alert.alert("Error", "Failed to load events. Please try again.");
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
     fetchEvents();
   }, []);
+
+  const handleRefresh = () => {
+    fetchEvents(true);
+  };
 
   const toggleFilter = (field, value) => {
     setFilters((prev) => ({
@@ -184,11 +198,23 @@ const EventList = () => {
   return (
     <View style={styles.container}>
       {/* Header */}
-      
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>Browse All Classes</Text>
+        <View style={styles.headerActions}>
+          <TouchableOpacity 
+            style={[styles.headerBtn, styles.refreshBtn]} 
+            onPress={handleRefresh}
+            disabled={refreshing}
+          >
+            <Text style={styles.refreshIcon}>
+              {refreshing ? "⟳" : "↻"}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
 
       {/* Main Content */}
       <View style={styles.mainContent}>
-        <Text style={styles.browseTitle}>Browse All Classes</Text>
         
         {/* Search and Filters */}
         <View style={styles.searchContainer}>
@@ -294,10 +320,12 @@ const EventList = () => {
         renderItem={({ item }) => (
           <EventCard event={item} onPress={setSelectedEvent} />
         )}
-            numColumns={2}
-            contentContainerStyle={styles.eventsGrid}
+        numColumns={2}
+        contentContainerStyle={styles.eventsGrid}
+        refreshing={refreshing}
+        onRefresh={handleRefresh}
         ListEmptyComponent={
-              <Text style={styles.emptyText}>No events found</Text>
+          <Text style={styles.emptyText}>No events found</Text>
         }
       />
         </View>
@@ -495,6 +523,18 @@ const styles = StyleSheet.create({
   headerBtnText: {
     fontSize: 14,
     color: "#666",
+  },
+  refreshBtn: {
+    backgroundColor: "#f0f0f0",
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginLeft: 8,
+  },
+  refreshIcon: {
+    fontSize: 18,
+    color: "#2196f3",
+    fontWeight: "bold",
   },
   registerBtn: {
     backgroundColor: "#333",
