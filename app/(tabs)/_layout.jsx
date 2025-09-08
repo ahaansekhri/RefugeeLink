@@ -81,8 +81,9 @@ const NGOTabs = () => {
         },
       })}
     >
-      <Tab.Screen name="Add Event" component={AddEvent} />
       <Tab.Screen name="Profile" component={NGOProfile} />
+      <Tab.Screen name="Add Event" component={AddEvent} />
+      
     </Tab.Navigator>
   );
 };

@@ -25,7 +25,24 @@ import { auth, db } from "../../config/firebase";
 
 const { width } = Dimensions.get('window');
 
+// Utility function to check if event is completed
+const isEventCompleted = (eventDate) => {
+  if (!eventDate) return false;
+  
+  // Parse the event date (assuming format like "Jan 15, 2025" or "2025-01-15")
+  const eventDateObj = new Date(eventDate);
+  const currentDate = new Date();
+  
+  // Reset time to start of day for accurate comparison
+  eventDateObj.setHours(0, 0, 0, 0);
+  currentDate.setHours(0, 0, 0, 0);
+  
+  return eventDateObj < currentDate;
+};
+
 const EventCard = ({ event, onPress }) => {
+  const isCompleted = isEventCompleted(event.date);
+  
   const getSpotsLeft = () => {
     const enrolled = event.enrolledCount || 0;
     const total = parseInt(event.slots) || 0;
@@ -33,6 +50,7 @@ const EventCard = ({ event, onPress }) => {
   };
 
   const getSpotsBadgeColor = () => {
+    if (isCompleted) return '#6c757d'; // Gray for completed events
     const spotsLeft = getSpotsLeft();
     if (spotsLeft <= 2) return '#ff4444';
     if (spotsLeft <= 5) return '#ffaa00';
@@ -41,33 +59,42 @@ const EventCard = ({ event, onPress }) => {
 
   return (
     <TouchableOpacity onPress={() => onPress(event)} style={styles.cardContainer}>
-      <View style={styles.card}>
+      <View style={[styles.card, isCompleted && styles.completedCard]}>
         <View style={styles.cardHeader}>
-          <View style={styles.difficultyBadge}>
-            <Text style={styles.difficultyText}>{event.difficulty || 'Beginner'}</Text>
+          <View style={[styles.difficultyBadge, isCompleted && styles.completedBadge]}>
+            <Text style={[styles.difficultyText, isCompleted && styles.completedText]}>
+              {isCompleted ? 'Completed' : (event.difficulty || 'Beginner')}
+            </Text>
           </View>
           <View style={[styles.spotsBadge, { backgroundColor: getSpotsBadgeColor() }]}>
-            <Text style={styles.spotsText}>{getSpotsLeft()} spots left</Text>
+            <Text style={styles.spotsText}>
+              {isCompleted ? 'Event Over' : `${getSpotsLeft()} spots left`}
+            </Text>
           </View>
         </View>
         
-        <Text style={styles.eventTitle}>{event.name}</Text>
-        <Text style={styles.providerText}>Offered by {event.ngoName}</Text>
+        <Text style={[styles.eventTitle, isCompleted && styles.completedTitle]}>{event.name}</Text>
+        <Text style={[styles.providerText, isCompleted && styles.completedProvider]}>Offered by {event.ngoName}</Text>
         
         <View style={styles.eventDetails}>
-          <Text style={styles.detailText}>📅 {event.date} at {event.time}</Text>
-          <Text style={styles.detailText}>📍 {event.location}</Text>
-          <Text style={styles.detailText}>👥 {event.enrolledCount || 0}/{event.slots} enrolled</Text>
-          <Text style={styles.detailText}>🌐 {event.languages?.join(", ") || 'English'}</Text>
-          <Text style={styles.detailText}>🎯 {event.clientGroup?.join(", ") || 'General Public'}</Text>
+          <Text style={[styles.detailText, isCompleted && styles.completedDetail]}>📅 {event.date} at {event.time}</Text>
+          <Text style={[styles.detailText, isCompleted && styles.completedDetail]}>📍 {event.location}</Text>
+          <Text style={[styles.detailText, isCompleted && styles.completedDetail]}>👥 {event.enrolledCount || 0}/{event.slots} enrolled</Text>
+          <Text style={[styles.detailText, isCompleted && styles.completedDetail]}>🌐 {event.languages?.join(", ") || 'English'}</Text>
+          <Text style={[styles.detailText, isCompleted && styles.completedDetail]}>🎯 {event.clientGroup?.join(", ") || 'General Public'}</Text>
         </View>
         
-        <Text style={styles.briefDesc}>
+        <Text style={[styles.briefDesc, isCompleted && styles.completedDesc]}>
           {event.description?.slice(0, 80)}...
         </Text>
         
-        <TouchableOpacity style={styles.viewDetailsBtn} onPress={() => onPress(event)}>
-          <Text style={styles.viewDetailsText}>View Details</Text>
+        <TouchableOpacity 
+          style={[styles.viewDetailsBtn, isCompleted && styles.completedBtn]} 
+          onPress={() => onPress(event)}
+        >
+          <Text style={[styles.viewDetailsText, isCompleted && styles.completedBtnText]}>
+            {isCompleted ? 'View Summary' : 'View Details'}
+          </Text>
         </TouchableOpacity>
       </View>
     </TouchableOpacity>
@@ -87,6 +114,7 @@ const EventList = () => {
     language: "",
     district: "",
     transport: "",
+    showCompleted: false,
   });
 
   const fetchEvents = async (isRefresh = false) => {
@@ -121,14 +149,24 @@ const EventList = () => {
   };
 
   const toggleFilter = (field, value) => {
-    setFilters((prev) => ({
-      ...prev,
-      [field]: prev[field] === value ? "" : value,
-    }));
+    setFilters((prev) => {
+      if (field === 'showCompleted') {
+        return {
+          ...prev,
+          [field]: !prev[field],
+        };
+      }
+      return {
+        ...prev,
+        [field]: prev[field] === value ? "" : value,
+      };
+    });
   };
 
   const applyFilters = () => {
     return events.filter((ev) => {
+      const isCompleted = isEventCompleted(ev.date);
+      
       const matchesSearch = !searchQuery || 
         ev.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         ev.ngoName.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -143,7 +181,9 @@ const EventList = () => {
         (!filters.transport || ev.transport === filters.transport)
       );
       
-      return matchesSearch && matchesFilters;
+      const matchesCompletedFilter = filters.showCompleted || !isCompleted;
+      
+      return matchesSearch && matchesFilters && matchesCompletedFilter;
     });
   };
 
@@ -265,7 +305,7 @@ const EventList = () => {
             field: "district",
           },
           {
-                  label: "Transportation",
+            label: "Transportation",
             options: [
               "Provided to all immigration paper (Form 8) holders",
               "Registered members of the NGO",
@@ -273,25 +313,34 @@ const EventList = () => {
             ],
             field: "transport",
           },
+          {
+            label: "Event Status",
+            options: ["Show Completed Events"],
+            field: "showCompleted",
+            isToggle: true,
+          },
         ].map((f) => (
                 <View key={f.field} style={styles.filterGroup}>
                   <Text style={styles.filterGroupLabel}>{f.label}</Text>
                   <View style={styles.filterOptions}>
-              {f.options.map((opt) => (
-                <TouchableOpacity
-                  key={opt}
-                  style={[
-                          styles.filterOption,
-                          filters[f.field] === opt && styles.activeFilterOption,
-                  ]}
-                  onPress={() => toggleFilter(f.field, opt)}
-                >
-                        <Text style={[
-                          styles.filterOptionText,
-                          filters[f.field] === opt && styles.activeFilterOptionText
-                        ]}>{opt}</Text>
-                </TouchableOpacity>
-                    ))}
+              {f.options.map((opt) => {
+                const isActive = f.isToggle ? filters[f.field] : filters[f.field] === opt;
+                return (
+                  <TouchableOpacity
+                    key={opt}
+                    style={[
+                      styles.filterOption,
+                      isActive && styles.activeFilterOption,
+                    ]}
+                    onPress={() => toggleFilter(f.field, opt)}
+                  >
+                    <Text style={[
+                      styles.filterOptionText,
+                      isActive && styles.activeFilterOptionText
+                    ]}>{opt}</Text>
+                  </TouchableOpacity>
+                );
+              })}
                   </View>
                 </View>
               ))}
@@ -303,6 +352,7 @@ const EventList = () => {
                   language: "",
                   district: "",
                   transport: "",
+                  showCompleted: false,
                 })}
               >
                 <Text style={styles.clearFiltersText}>Clear All Filters</Text>
@@ -1020,5 +1070,37 @@ const styles = StyleSheet.create({
   viewAllText: {
     fontSize: 14,
     color: "#2196f3",
+  },
+
+  // Completed Event Styles
+  completedCard: {
+    opacity: 0.7,
+    backgroundColor: '#f8f9fa',
+    borderWidth: 1,
+    borderColor: '#e9ecef',
+  },
+  completedBadge: {
+    backgroundColor: '#6c757d',
+  },
+  completedText: {
+    color: '#fff',
+  },
+  completedTitle: {
+    color: '#6c757d',
+  },
+  completedProvider: {
+    color: '#6c757d',
+  },
+  completedDetail: {
+    color: '#6c757d',
+  },
+  completedDesc: {
+    color: '#6c757d',
+  },
+  completedBtn: {
+    backgroundColor: '#6c757d',
+  },
+  completedBtnText: {
+    color: '#fff',
   },
 });
