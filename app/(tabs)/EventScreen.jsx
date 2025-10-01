@@ -111,6 +111,9 @@ const EventList = () => {
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [showFilters, setShowFilters] = useState(false);
+  const [showConfirmationModal, setShowConfirmationModal] = useState(false);
+  const [eventToRegister, setEventToRegister] = useState(null);
+  const [registeredEvents, setRegisteredEvents] = useState(new Set());
   const [filters, setFilters] = useState({
     clientGroup: "",
     activityType: "",
@@ -134,6 +137,18 @@ const EventList = () => {
         ...doc.data(),
       }));
       setEvents(eventList);
+
+      // Check which events the current user is registered for
+      const userId = auth.currentUser?.uid;
+      if (userId) {
+        const registeredSet = new Set();
+        eventList.forEach(event => {
+          if (event.registeredUsers?.includes(userId)) {
+            registeredSet.add(event.id);
+          }
+        });
+        setRegisteredEvents(registeredSet);
+      }
     } catch (error) {
       console.log("Error fetching events:", error);
       Alert.alert("Error", "Failed to load events. Please try again.");
@@ -190,16 +205,34 @@ const EventList = () => {
     });
   };
 
+  // Show confirmation modal for registration
+  const handleRegisterClick = (eventId) => {
+    const userId = auth.currentUser?.uid;
+    if (!userId) {
+      Alert.alert("Error", "You must be logged in to register.");
+      return;
+    }
+
+    // Check if already registered
+    if (registeredEvents.has(eventId)) {
+      Alert.alert("Notice", "You have already registered for this event.");
+      return;
+    }
+
+    setEventToRegister(eventId);
+    setShowConfirmationModal(true);
+  };
+
   // ✅ Firestore registration logic
-  const registerForEvent = async (eventId) => {
+  const confirmRegistration = async () => {
     try {
       const userId = auth.currentUser?.uid;
-      if (!userId) {
+      if (!userId || !eventToRegister) {
         Alert.alert("Error", "You must be logged in to register.");
         return;
       }
 
-      const eventRef = doc(db, "events", eventId);
+      const eventRef = doc(db, "events", eventToRegister);
       const eventSnap = await getDoc(eventRef);
 
       if (!eventSnap.exists()) {
@@ -227,12 +260,22 @@ const EventList = () => {
         registeredUsers: arrayUnion(userId),
       });
 
+      // Update local state
+      setRegisteredEvents(prev => new Set([...prev, eventToRegister]));
+
       Alert.alert("Success", "You have registered for the event.");
+      setShowConfirmationModal(false);
+      setEventToRegister(null);
       setSelectedEvent(null);
     } catch (error) {
       console.error("Error registering:", error);
       Alert.alert("Error", "Something went wrong.");
     }
+  };
+
+  const cancelRegistration = () => {
+    setShowConfirmationModal(false);
+    setEventToRegister(null);
   };
 
   if (loading)
@@ -486,10 +529,19 @@ const EventList = () => {
                   </View>
 
                   <TouchableOpacity 
-                    style={styles.registerButton}
-                onPress={() => registerForEvent(selectedEvent.id)}
+                    style={[
+                      styles.registerButton,
+                      registeredEvents.has(selectedEvent.id) && styles.registeredButton
+                    ]}
+                    onPress={() => handleRegisterClick(selectedEvent.id)}
+                    disabled={registeredEvents.has(selectedEvent.id)}
                   >
-                    <Text style={styles.registerButtonText}>Register for This Class</Text>
+                    <Text style={[
+                      styles.registerButtonText,
+                      registeredEvents.has(selectedEvent.id) && styles.registeredButtonText
+                    ]}>
+                      {registeredEvents.has(selectedEvent.id) ? 'Already Registered' : 'Register for This Class'}
+                    </Text>
                   </TouchableOpacity>
                   
                   <Text style={styles.registrationNote}>You'll need to create a free account to register</Text>
@@ -533,6 +585,37 @@ const EventList = () => {
             </>
           )}
         </ScrollView>
+      </Modal>
+
+      {/* Confirmation Modal */}
+      <Modal
+        visible={showConfirmationModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={cancelRegistration}
+      >
+        <View style={styles.confirmationOverlay}>
+          <View style={styles.confirmationModal}>
+            <Text style={styles.confirmationTitle}>Confirm Registration</Text>
+            <Text style={styles.confirmationMessage}>
+              Are you sure you want to register for this class? This action cannot be undone.
+            </Text>
+            <View style={styles.confirmationButtons}>
+              <TouchableOpacity 
+                style={styles.cancelButton}
+                onPress={cancelRegistration}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.confirmButton}
+                onPress={confirmRegistration}
+              >
+                <Text style={styles.confirmButtonText}>Register</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
       </Modal>
     </View>
   );
@@ -1104,6 +1187,80 @@ const styles = StyleSheet.create({
     backgroundColor: '#6c757d',
   },
   completedBtnText: {
+    color: '#fff',
+  },
+
+  // Confirmation Modal Styles
+  confirmationOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  confirmationModal: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 24,
+    width: '100%',
+    maxWidth: 400,
+    shadowColor: '#000',
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 10,
+  },
+  confirmationTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  confirmationMessage: {
+    fontSize: 16,
+    color: '#666',
+    lineHeight: 22,
+    marginBottom: 24,
+    textAlign: 'center',
+  },
+  confirmationButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  cancelButton: {
+    flex: 1,
+    backgroundColor: '#f5f5f5',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  cancelButtonText: {
+    fontSize: 16,
+    color: '#666',
+    fontWeight: '600',
+  },
+  confirmButton: {
+    flex: 1,
+    backgroundColor: '#333',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  confirmButtonText: {
+    fontSize: 16,
+    color: '#fff',
+    fontWeight: '600',
+  },
+
+  // Registered Button Styles
+  registeredButton: {
+    backgroundColor: '#6c757d',
+    opacity: 0.7,
+  },
+  registeredButtonText: {
     color: '#fff',
   },
 });
