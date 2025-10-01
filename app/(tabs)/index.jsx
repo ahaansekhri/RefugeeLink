@@ -6,13 +6,14 @@ import { doc, getFirestore, setDoc } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import {
-    ActivityIndicator, Alert,
-    Dimensions,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text, TextInput, TouchableOpacity,
-    View
+  ActivityIndicator, Alert,
+  Dimensions,
+  Image,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text, TextInput, TouchableOpacity,
+  View
 } from 'react-native';
 import { auth } from '../../config/firebase';
 
@@ -191,7 +192,11 @@ export default function AuthPage() {
       <View style={styles.contentWrapper}>
         <View style={styles.iconContainer}>
           <View style={styles.iconCircle}>
-            <Text style={styles.icon}>🛡️</Text>
+            <Image 
+              source={require('../../assets/images/icon.png')} 
+              style={styles.icon}
+              resizeMode="contain"
+            />
           </View>
         </View>
         <Text style={[styles.title, isDarkMode && { color: '#fff' }]}>RefugeeLink</Text>
@@ -426,8 +431,8 @@ const styles = StyleSheet.create({
     borderRadius: 999 
   },
   icon: { 
-    fontSize: isWeb ? 24 : 32, 
-    color: '#007bff' 
+    width: isWeb ? 24 : 32, 
+    height: isWeb ? 24 : 32,
   },
   title: { 
     fontSize: isWeb ? 24 : 24, 
