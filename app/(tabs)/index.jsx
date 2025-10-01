@@ -6,9 +6,10 @@ import { doc, getFirestore, setDoc } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import {
-  ActivityIndicator, Alert,
+  ActivityIndicator,
   Dimensions,
   Image,
+  Modal,
   Platform,
   ScrollView,
   StyleSheet,
@@ -41,6 +42,13 @@ export default function AuthPage() {
   // Error states for validation
   const [errors, setErrors] = useState({});
 
+  // Modal states
+  const [showModal, setShowModal] = useState(false);
+  const [modalType, setModalType] = useState(''); // 'success', 'error', 'warning', 'info'
+  const [modalTitle, setModalTitle] = useState('');
+  const [modalMessage, setModalMessage] = useState('');
+  const [modalAction, setModalAction] = useState(null);
+
   const db = getFirestore();
 
   // Validation functions
@@ -55,6 +63,40 @@ export default function AuthPage() {
 
   const validateName = (name) => {
     return name.trim().length >= 2;
+  };
+
+  // Function to show modal
+  const showModalMessage = (type, title, message, action = null) => {
+    setModalType(type);
+    setModalTitle(title);
+    setModalMessage(message);
+    setModalAction(action);
+    setShowModal(true);
+  };
+
+  const hideModal = () => {
+    setShowModal(false);
+    setModalType('');
+    setModalTitle('');
+    setModalMessage('');
+    setModalAction(null);
+  };
+
+  // Enhanced validation functions
+  const validatePasswordStrength = (password) => {
+    const hasUpperCase = /[A-Z]/.test(password);
+    const hasLowerCase = /[a-z]/.test(password);
+    const hasNumbers = /\d/.test(password);
+    const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+    
+    return {
+      isValid: password.length >= 8 && hasUpperCase && hasLowerCase && hasNumbers,
+      hasUpperCase,
+      hasLowerCase,
+      hasNumbers,
+      hasSpecialChar,
+      length: password.length
+    };
   };
 
   const validateLoginForm = () => {
@@ -73,6 +115,11 @@ export default function AuthPage() {
     }
     
     setErrors(newErrors);
+    
+    if (Object.keys(newErrors).length > 0) {
+      showModalMessage('warning', 'Validation Error', 'Please fix the errors below before continuing.');
+    }
+    
     return Object.keys(newErrors).length === 0;
   };
 
@@ -83,21 +130,41 @@ export default function AuthPage() {
       newErrors.registerName = 'Full name is required';
     } else if (!validateName(registerName)) {
       newErrors.registerName = 'Name must be at least 2 characters';
+    } else if (registerName.trim().length > 50) {
+      newErrors.registerName = 'Name must be less than 50 characters';
     }
     
     if (!registerEmail.trim()) {
       newErrors.registerEmail = 'Email is required';
     } else if (!validateEmail(registerEmail)) {
       newErrors.registerEmail = 'Please enter a valid email address';
+    } else if (registerEmail.length > 100) {
+      newErrors.registerEmail = 'Email must be less than 100 characters';
     }
     
     if (!registerPassword) {
       newErrors.registerPassword = 'Password is required';
-    } else if (!validatePassword(registerPassword)) {
-      newErrors.registerPassword = 'Password must be at least 6 characters';
+    } else {
+      const passwordStrength = validatePasswordStrength(registerPassword);
+      if (!passwordStrength.isValid) {
+        if (registerPassword.length < 8) {
+          newErrors.registerPassword = 'Password must be at least 8 characters';
+        } else if (!passwordStrength.hasUpperCase) {
+          newErrors.registerPassword = 'Password must contain at least one uppercase letter';
+        } else if (!passwordStrength.hasLowerCase) {
+          newErrors.registerPassword = 'Password must contain at least one lowercase letter';
+        } else if (!passwordStrength.hasNumbers) {
+          newErrors.registerPassword = 'Password must contain at least one number';
+        }
+      }
     }
     
     setErrors(newErrors);
+    
+    if (Object.keys(newErrors).length > 0) {
+      showModalMessage('warning', 'Registration Error', 'Please fix the errors below before creating your account.');
+    }
+    
     return Object.keys(newErrors).length === 0;
   };
 
@@ -116,21 +183,30 @@ export default function AuthPage() {
     try {
       await signInWithEmailAndPassword(auth, loginEmail.trim(), loginPassword);
       setIsLoading(false);
+      showModalMessage('success', 'Login Successful', 'Welcome back! You have been successfully logged in.');
     } catch (error) {
       setIsLoading(false);
       let errorMessage = 'Login failed. Please try again.';
+      let errorTitle = 'Login Failed';
       
       if (error.code === 'auth/user-not-found') {
-        errorMessage = 'No account found with this email address.';
+        errorMessage = 'No account found with this email address. Please check your email or create a new account.';
+        errorTitle = 'Account Not Found';
       } else if (error.code === 'auth/wrong-password') {
-        errorMessage = 'Incorrect password. Please try again.';
+        errorMessage = 'Incorrect password. Please try again or reset your password.';
+        errorTitle = 'Incorrect Password';
       } else if (error.code === 'auth/invalid-email') {
-        errorMessage = 'Invalid email address.';
+        errorMessage = 'Invalid email address. Please enter a valid email.';
+        errorTitle = 'Invalid Email';
       } else if (error.code === 'auth/too-many-requests') {
-        errorMessage = 'Too many failed attempts. Please try again later.';
+        errorMessage = 'Too many failed attempts. Please try again later or reset your password.';
+        errorTitle = 'Too Many Attempts';
+      } else if (error.code === 'auth/network-request-failed') {
+        errorMessage = 'Network error. Please check your internet connection and try again.';
+        errorTitle = 'Network Error';
       }
       
-      Alert.alert('Login Failed', errorMessage);
+      showModalMessage('error', errorTitle, errorMessage);
     }
   };
 
@@ -152,19 +228,61 @@ export default function AuthPage() {
         role: role,
       });
       setIsLoading(false);
+      showModalMessage('success', 'Registration Successful', `Welcome to RefugeeLink, ${registerName.trim()}! Your account has been created successfully.`);
     } catch (error) {
       setIsLoading(false);
       let errorMessage = 'Registration failed. Please try again.';
+      let errorTitle = 'Registration Failed';
       
       if (error.code === 'auth/email-already-in-use') {
-        errorMessage = 'An account with this email already exists.';
+        errorMessage = 'An account with this email already exists. Please use a different email or try logging in.';
+        errorTitle = 'Email Already in Use';
       } else if (error.code === 'auth/invalid-email') {
-        errorMessage = 'Invalid email address.';
+        errorMessage = 'Invalid email address. Please enter a valid email.';
+        errorTitle = 'Invalid Email';
       } else if (error.code === 'auth/weak-password') {
-        errorMessage = 'Password is too weak. Please choose a stronger password.';
+        errorMessage = 'Password is too weak. Please choose a stronger password with at least 8 characters, including uppercase, lowercase, and numbers.';
+        errorTitle = 'Weak Password';
+      } else if (error.code === 'auth/network-request-failed') {
+        errorMessage = 'Network error. Please check your internet connection and try again.';
+        errorTitle = 'Network Error';
+      } else if (error.code === 'auth/operation-not-allowed') {
+        errorMessage = 'Registration is currently disabled. Please contact support.';
+        errorTitle = 'Registration Disabled';
       }
       
-      Alert.alert('Registration Failed', errorMessage);
+      showModalMessage('error', errorTitle, errorMessage);
+    }
+  };
+
+  // Helper functions for modal
+  const getModalIcon = () => {
+    switch (modalType) {
+      case 'success':
+        return '✓';
+      case 'error':
+        return '✕';
+      case 'warning':
+        return '⚠';
+      case 'info':
+        return 'ℹ';
+      default:
+        return 'ℹ';
+    }
+  };
+
+  const getModalIconColor = () => {
+    switch (modalType) {
+      case 'success':
+        return '#4caf50';
+      case 'error':
+        return '#f44336';
+      case 'warning':
+        return '#ff9800';
+      case 'info':
+        return '#2196f3';
+      default:
+        return '#2196f3';
     }
   };
 
@@ -374,6 +492,43 @@ export default function AuthPage() {
           </View>
         )}
       </View>
+
+      {/* Modal Component */}
+      <Modal
+        visible={showModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={hideModal}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <View style={[styles.modalIcon, { backgroundColor: getModalIconColor() }]}>
+              <Text style={styles.modalIconText}>{getModalIcon()}</Text>
+            </View>
+            <Text style={styles.modalTitle}>{modalTitle}</Text>
+            <Text style={styles.modalMessage}>{modalMessage}</Text>
+            <View style={styles.modalButtons}>
+              <TouchableOpacity 
+                style={[styles.modalButton, styles.modalButtonSecondary]} 
+                onPress={hideModal}
+              >
+                <Text style={styles.modalButtonSecondaryText}>Close</Text>
+              </TouchableOpacity>
+              {modalAction && (
+                <TouchableOpacity 
+                  style={[styles.modalButton, styles.modalButtonPrimary]} 
+                  onPress={() => {
+                    modalAction();
+                    hideModal();
+                  }}
+                >
+                  <Text style={styles.modalButtonPrimaryText}>Continue</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -655,6 +810,85 @@ const styles = StyleSheet.create({
   },
   selectedRoleText: {
     color: '#007bff',
+    fontWeight: '600',
+  },
+
+  // Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  modalContainer: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 24,
+    width: '100%',
+    maxWidth: 400,
+    shadowColor: '#000',
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 10,
+    alignItems: 'center',
+  },
+  modalIcon: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  modalIconText: {
+    fontSize: 24,
+    color: '#fff',
+    fontWeight: 'bold',
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  modalMessage: {
+    fontSize: 16,
+    color: '#666',
+    lineHeight: 22,
+    marginBottom: 24,
+    textAlign: 'center',
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
+    width: '100%',
+  },
+  modalButton: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  modalButtonPrimary: {
+    backgroundColor: '#007bff',
+  },
+  modalButtonSecondary: {
+    backgroundColor: '#f8f9fa',
+    borderWidth: 1,
+    borderColor: '#dee2e6',
+  },
+  modalButtonPrimaryText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  modalButtonSecondaryText: {
+    color: '#6c757d',
+    fontSize: 16,
     fontWeight: '600',
   },
 });
