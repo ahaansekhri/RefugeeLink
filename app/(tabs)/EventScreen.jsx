@@ -526,6 +526,44 @@ const EventList = () => {
                   </View>
                 </View>
 
+                {/* Who is it available to? Card */}
+                <View style={styles.modalCard}>
+                  <Text style={styles.modalCardTitle}>Who is it available to?</Text>
+                  <View style={styles.modalInfoItem}>
+                    <Text style={styles.modalInfoIcon}>👥</Text>
+                    <Text style={styles.modalInfoText}>
+                      {selectedEvent.clientGroup && selectedEvent.clientGroup.length > 0 
+                        ? selectedEvent.clientGroup.join(", ") 
+                        : 'General Public'}
+                    </Text>
+                  </View>
+                  <View style={styles.modalInfoItem}>
+                    <Text style={styles.modalInfoIcon}>🌐</Text>
+                    <Text style={styles.modalInfoText}>
+                      Languages: {selectedEvent.languages && selectedEvent.languages.length > 0 
+                        ? selectedEvent.languages.join(", ") 
+                        : 'English'}
+                    </Text>
+                  </View>
+                  <View style={styles.modalInfoItem}>
+                    <Text style={styles.modalInfoIcon}>🎯</Text>
+                    <Text style={styles.modalInfoText}>
+                      Difficulty: {selectedEvent.difficulty || 'Beginner'}
+                    </Text>
+                  </View>
+                </View>
+
+                {/* Transportation Vouchers Card */}
+                {selectedEvent.transport && (
+                  <View style={styles.modalCard}>
+                    <Text style={styles.modalCardTitle}>Transportation Vouchers</Text>
+                    <View style={styles.modalInfoItem}>
+                      <Text style={styles.modalInfoIcon}>🚌</Text>
+                      <Text style={styles.modalInfoText}>{selectedEvent.transport}</Text>
+                    </View>
+                  </View>
+                )}
+
                 {/* About This Class Card */}
                 <View style={styles.modalCard}>
                   <Text style={styles.modalCardTitle}>About This Class</Text>
@@ -621,41 +659,6 @@ const EventList = () => {
                   </TouchableOpacity>
                   
                   <Text style={styles.registrationNote}>You'll need to create a free account to register</Text>
-                </View>
-
-                {/* Need Help Card */}
-                <View style={styles.helpCard}>
-                  <Text style={styles.helpTitle}>Need Help?</Text>
-                  <TouchableOpacity style={styles.helpButton}>
-                    <Text style={styles.helpIcon}>📍</Text>
-                    <Text style={styles.helpText}>Get Directions</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={styles.helpButton}>
-                    <Text style={styles.helpIcon}>📅</Text>
-                    <Text style={styles.helpText}>Add to Calendar</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={styles.helpButton}>
-                    <Text style={styles.helpIcon}>🌐</Text>
-                    <Text style={styles.helpText}>Contact NGO</Text>
-                  </TouchableOpacity>
-                </View>
-
-                {/* Similar Classes Card */}
-                <View style={styles.similarCard}>
-                  <Text style={styles.similarTitle}>Similar Classes</Text>
-                  <View style={styles.similarClass}>
-                    <Text style={styles.similarClassName}>Intermediate English</Text>
-                    <Text style={styles.similarClassProvider}>{selectedEvent.ngoName}</Text>
-                    <Text style={styles.similarClassDate}>Jan 20, 2025</Text>
-                  </View>
-                  <View style={styles.similarClass}>
-                    <Text style={styles.similarClassName}>English for Work</Text>
-                    <Text style={styles.similarClassProvider}>YMCA Hong Kong</Text>
-                    <Text style={styles.similarClassDate}>Jan 25, 2025</Text>
-                  </View>
-                  <TouchableOpacity style={styles.viewAllButton}>
-                    <Text style={styles.viewAllText}>View All English Classes</Text>
-                  </TouchableOpacity>
                 </View>
               </View>
             </>
@@ -1165,80 +1168,6 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
 
-  // Help Card
-  helpCard: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 20,
-    marginBottom: 16,
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  helpTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    marginBottom: 12,
-    color: "#333",
-  },
-  helpButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 8,
-  },
-  helpIcon: {
-    fontSize: 16,
-    marginRight: 8,
-    width: 20,
-  },
-  helpText: {
-    fontSize: 14,
-    color: "#2196f3",
-  },
-
-  // Similar Classes Card
-  similarCard: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 20,
-    marginBottom: 20,
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  similarTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    marginBottom: 12,
-    color: "#333",
-  },
-  similarClass: {
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: "#f0f0f0",
-  },
-  similarClassName: {
-    fontSize: 14,
-    fontWeight: "bold",
-    color: "#333",
-  },
-  similarClassProvider: {
-    fontSize: 12,
-    color: "#666",
-  },
-  similarClassDate: {
-    fontSize: 12,
-    color: "#666",
-  },
-  viewAllButton: {
-    marginTop: 12,
-  },
-  viewAllText: {
-    fontSize: 14,
-    color: "#2196f3",
-  },
 
   // Completed Event Styles
   completedCard: {
