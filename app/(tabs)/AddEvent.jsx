@@ -34,8 +34,8 @@ const transportOptions = [
 ];
 const difficultyLevels = ["Beginner", "Intermediate", "Advanced"];
 const slotsOptions = [
+  { label: 'Unlimited', value: 'unlimited' },
   ...Array.from({ length: 200 }, (_, i) => i + 1), // 1 to 200 slots
-  { label: 'Unlimited', value: 'unlimited' }
 ];
 const hoursOptions = Array.from({ length: 24 }, (_, i) => i); // 0 to 23 hours
 const minutesOptions = Array.from({ length: 60 }, (_, i) => i); // 0 to 59 minutes
@@ -49,8 +49,8 @@ const NGOEventForm = () => {
     date: "",
     time: "",
     duration: "",
-    durationHours: 1,
-    durationMinutes: 0,
+    durationHours: null,
+    durationMinutes: null,
     slots: 1, // Ensure this is a number
     location: "",
     ngoName: "",
@@ -203,8 +203,12 @@ const NGOEventForm = () => {
   const handleDurationChange = (field, value) => {
     const newData = { ...eventData, [field]: value };
     // Update the duration string when hours or minutes change
-    const durationString = `${newData.durationHours}h ${newData.durationMinutes}m`;
-    newData.duration = durationString;
+    if (newData.durationHours !== null && newData.durationMinutes !== null) {
+      const durationString = `${newData.durationHours}h ${newData.durationMinutes}m`;
+      newData.duration = durationString;
+    } else {
+      newData.duration = '';
+    }
     setEventData(newData);
   };
 
@@ -362,7 +366,7 @@ const NGOEventForm = () => {
       }
     }
     
-    if (!eventData.duration) {
+    if (!eventData.duration || eventData.durationHours === null || eventData.durationMinutes === null) {
       errors.duration = 'Event duration is required';
     } else if (eventData.durationHours === 0 && eventData.durationMinutes === 0) {
       errors.duration = 'Event duration must be at least 1 minute';
@@ -458,8 +462,8 @@ const NGOEventForm = () => {
       date: "",
       time: "",
       duration: "",
-      durationHours: 1,
-      durationMinutes: 0,
+      durationHours: null,
+      durationMinutes: null,
       slots: 1, // Ensure this is a number
       location: "",
       ngoName: "",
@@ -693,7 +697,7 @@ const NGOEventForm = () => {
                 onPress={() => setShowHoursPicker(true)}
               >
                 <Text style={styles.durationButtonText}>
-                  {eventData.durationHours}h
+                  {eventData.durationHours !== null ? `${eventData.durationHours}h` : 'Hours'}
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity 
@@ -701,7 +705,7 @@ const NGOEventForm = () => {
                 onPress={() => setShowMinutesPicker(true)}
               >
                 <Text style={styles.durationButtonText}>
-                  {eventData.durationMinutes}m
+                  {eventData.durationMinutes !== null ? `${eventData.durationMinutes}m` : 'Minutes'}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -970,7 +974,7 @@ const NGOEventForm = () => {
         <View style={styles.modalContent}>
           <Text style={styles.modalTitle}>Select Hours</Text>
           <Picker
-            selectedValue={eventData.durationHours}
+            selectedValue={eventData.durationHours || 0}
             onValueChange={(value) => {
               handleDurationChange('durationHours', value);
               setShowHoursPicker(false);
@@ -997,7 +1001,7 @@ const NGOEventForm = () => {
         <View style={styles.modalContent}>
           <Text style={styles.modalTitle}>Select Minutes</Text>
           <Picker
-            selectedValue={eventData.durationMinutes}
+            selectedValue={eventData.durationMinutes || 0}
             onValueChange={(value) => {
               handleDurationChange('durationMinutes', value);
               setShowMinutesPicker(false);
