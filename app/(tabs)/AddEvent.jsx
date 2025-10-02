@@ -1,7 +1,8 @@
+import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { addDoc, collection, doc, getDoc } from "firebase/firestore";
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { useAuthState } from 'react-firebase-hooks/auth';
 import {
   ActivityIndicator,
@@ -32,7 +33,10 @@ const transportOptions = [
   "No transportation allowance is provided"
 ];
 const difficultyLevels = ["Beginner", "Intermediate", "Advanced"];
-const slotsOptions = Array.from({ length: 50 }, (_, i) => i + 1); // 1 to 50 slots
+const slotsOptions = [
+  ...Array.from({ length: 200 }, (_, i) => i + 1), // 1 to 200 slots
+  { label: 'Unlimited', value: 'unlimited' }
+];
 const hoursOptions = Array.from({ length: 24 }, (_, i) => i); // 0 to 23 hours
 const minutesOptions = Array.from({ length: 60 }, (_, i) => i); // 0 to 59 minutes
 
@@ -47,7 +51,7 @@ const NGOEventForm = () => {
     duration: "",
     durationHours: 1,
     durationMinutes: 0,
-    slots: 1,
+    slots: 1, // Ensure this is a number
     location: "",
     ngoName: "",
     description: "",
@@ -83,6 +87,10 @@ const NGOEventForm = () => {
   const [hasProfile, setHasProfile] = useState(false);
   const [profileLoading, setProfileLoading] = useState(true);
   const [showProfileModal, setShowProfileModal] = useState(false);
+  
+  // Form submission state
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [validationErrors, setValidationErrors] = useState({});
 
   // Check if user has NGO profile
   const checkProfile = async () => {
@@ -120,8 +128,26 @@ const NGOEventForm = () => {
     checkProfile();
   }, [user]);
 
+  // Reload profile data when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      if (user) {
+        checkProfile();
+      }
+    }, [user])
+  );
+
   const handleChange = (field, value) => {
-    setEventData({ ...eventData, [field]: value });
+    // Handle slots field (can be number or 'unlimited')
+    if (field === 'slots') {
+      if (value === 'unlimited') {
+        setEventData({ ...eventData, [field]: 'unlimited' });
+      } else {
+        setEventData({ ...eventData, [field]: parseInt(value) || 1 });
+      }
+    } else {
+      setEventData({ ...eventData, [field]: value });
+    }
   };
 
   const handleMultiSelect = (field, option) => {
@@ -297,30 +323,128 @@ const NGOEventForm = () => {
   };
 
   const validateForm = () => {
-    const requiredFields = [
-      'name', 'date', 'time', 'duration', 'slots', 'location', 
-      'ngoName', 'description', 'activityType', 'district', 'transport'
-    ];
+    const errors = {};
     
-    for (const field of requiredFields) {
-      if (!eventData[field]) {
-        Alert.alert("Validation Error", `Please fill in the ${field} field`);
-        return false;
+    // Required field validations
+    if (!eventData.name?.trim()) {
+      errors.name = 'Event name is required';
+    } else if (eventData.name.trim().length < 3) {
+      errors.name = 'Event name must be at least 3 characters';
+    } else if (eventData.name.trim().length > 100) {
+      errors.name = 'Event name must be less than 100 characters';
+    }
+    
+    if (!eventData.date) {
+      errors.date = 'Event date is required';
+    } else {
+      const eventDate = new Date(eventData.date);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      if (eventDate < today) {
+        errors.date = 'Event date cannot be in the past';
+      }
+      
+      // Check if date is too far in the future (e.g., more than 2 years)
+      const maxDate = new Date();
+      maxDate.setFullYear(maxDate.getFullYear() + 2);
+      if (eventDate > maxDate) {
+        errors.date = 'Event date cannot be more than 2 years in the future';
       }
     }
     
+    if (!eventData.time) {
+      errors.time = 'Event time is required';
+    } else {
+      const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
+      if (!timeRegex.test(eventData.time)) {
+        errors.time = 'Please enter a valid time format (HH:MM)';
+      }
+    }
+    
+    if (!eventData.duration) {
+      errors.duration = 'Event duration is required';
+    } else if (eventData.durationHours === 0 && eventData.durationMinutes === 0) {
+      errors.duration = 'Event duration must be at least 1 minute';
+    } else if (eventData.durationHours > 12) {
+      errors.duration = 'Event duration cannot exceed 12 hours';
+    }
+    
+    // Handle slots validation (including unlimited option)
+    console.log('Slots validation - eventData.slots:', eventData.slots, 'type:', typeof eventData.slots);
+    
+    if (eventData.slots === undefined || eventData.slots === null || eventData.slots === '') {
+      errors.slots = 'Please select a valid number of slots (1-200 or unlimited)';
+    } else if (eventData.slots === 'unlimited') {
+      // Unlimited slots is valid
+    } else {
+      const slotsNumber = parseInt(eventData.slots);
+      if (isNaN(slotsNumber) || slotsNumber <= 0) {
+        errors.slots = 'Please select a valid number of slots (1-200 or unlimited)';
+      } else if (slotsNumber > 200) {
+        errors.slots = 'Maximum 200 slots allowed (use unlimited for more)';
+      }
+    }
+    
+    if (!eventData.location?.trim()) {
+      errors.location = 'Event location is required';
+    } else if (eventData.location.trim().length < 5) {
+      errors.location = 'Please provide a more specific location';
+    } else if (eventData.location.trim().length > 200) {
+      errors.location = 'Location description is too long';
+    }
+    
+    if (!eventData.ngoName?.trim()) {
+      errors.ngoName = 'NGO name is required';
+    }
+    
+    if (!eventData.description?.trim()) {
+      errors.description = 'Event description is required';
+    } else if (eventData.description.trim().length < 20) {
+      errors.description = 'Description must be at least 20 characters';
+    } else if (eventData.description.trim().length > 1000) {
+      errors.description = 'Description must be less than 1000 characters';
+    }
+    
+    if (!eventData.activityType) {
+      errors.activityType = 'Activity type is required';
+    }
+    
+    if (!eventData.district) {
+      errors.district = 'District is required';
+    }
+    
+    if (!eventData.transport) {
+      errors.transport = 'Transportation option is required';
+    }
+    
     if (eventData.clientGroup.length === 0) {
-      Alert.alert("Validation Error", "Please select at least one client group");
-      return false;
+      errors.clientGroup = 'Please select at least one client group';
     }
     
     if (eventData.languages.length === 0) {
-      Alert.alert("Validation Error", "Please select at least one language");
-      return false;
+      errors.languages = 'Please select at least one language';
     }
     
-    if (isNaN(eventData.slots) || parseInt(eventData.slots) <= 0) {
-      Alert.alert("Validation Error", "Please select a valid number of slots");
+    // Validate materials field if provided
+    if (eventData.materials && eventData.materials.trim().length > 500) {
+      errors.materials = 'Materials description is too long (max 500 characters)';
+    }
+    
+    // Validate NGO info fields if provided
+    if (eventData.ngoInfo && eventData.ngoInfo.trim().length > 1000) {
+      errors.ngoInfo = 'NGO description is too long (max 1000 characters)';
+    }
+    
+    if (eventData.ngoContact && eventData.ngoContact.trim().length > 100) {
+      errors.ngoContact = 'Contact information is too long (max 100 characters)';
+    }
+    
+    setValidationErrors(errors);
+    
+    if (Object.keys(errors).length > 0) {
+      const firstError = Object.values(errors)[0];
+      Alert.alert("Validation Error", firstError);
       return false;
     }
     
@@ -336,7 +460,7 @@ const NGOEventForm = () => {
       duration: "",
       durationHours: 1,
       durationMinutes: 0,
-      slots: 1,
+      slots: 1, // Ensure this is a number
       location: "",
       ngoName: "",
       description: "",
@@ -362,6 +486,10 @@ const NGOEventForm = () => {
     setSelectedDate(new Date());
     setSelectedTime(new Date());
 
+    // Reset validation errors and submission state
+    setValidationErrors({});
+    setIsSubmitting(false);
+
     // Refresh NGO profile data
     if (user) {
       checkProfile();
@@ -369,22 +497,37 @@ const NGOEventForm = () => {
   };
 
   const handleSubmit = async () => {
+    // Prevent double submission
+    if (isSubmitting) {
+      return;
+    }
+    
     // Check if user has profile first
     if (!hasProfile) {
       setShowProfileModal(true);
       return;
     }
     
+    // Clear previous validation errors
+    setValidationErrors({});
+    
     if (!validateForm()) return;
     
     try {
+      setIsSubmitting(true);
+      
       const eventToSave = {
         ...eventData,
-        slots: parseInt(eventData.slots),
+        ngoId: auth.currentUser.uid,
+        slots: eventData.slots === 'unlimited' ? 'unlimited' : parseInt(eventData.slots),
         enrolledCount: 0,
         registeredUsers: [],
+        status: 'active', // Set initial status
         createdAt: new Date().toISOString(),
       };
+      
+      console.log('Saving event with ngoId:', auth.currentUser.uid);
+      console.log('Event data:', eventToSave);
       
       await addDoc(collection(db, "events"), eventToSave);
       
@@ -396,7 +539,10 @@ const NGOEventForm = () => {
         resetForm();
       }, 100);
     } catch (error) {
-      Alert.alert("Error", error.message);
+      console.error('Error creating event:', error);
+      Alert.alert("Error", "Failed to create event. Please try again.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -416,33 +562,77 @@ const NGOEventForm = () => {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <ScrollView style={styles.scrollContainer}>
-      <Text style={styles.header}>Create NGO Event</Text>
+        <View style={styles.headerContainer}>
+          <Text style={styles.header}>Create NGO Event</Text>
+          <TouchableOpacity 
+            style={styles.refreshButton}
+            onPress={checkProfile}
+            disabled={profileLoading}
+          >
+            <Ionicons 
+              name="refresh" 
+              size={24} 
+              color={profileLoading ? "#ccc" : "#2196f3"} 
+            />
+          </TouchableOpacity>
+        </View>
 
         {/* Basic Information */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Basic Information</Text>
           <TextInput 
-            style={styles.input} 
+            style={[styles.input, validationErrors.name && styles.inputError]} 
             placeholder="Event Name *" 
             value={eventData.name} 
-            onChangeText={(v) => handleChange("name", v)} 
+            onChangeText={(v) => {
+              handleChange("name", v);
+              // Clear validation error when user starts typing
+              if (validationErrors.name) {
+                setValidationErrors(prev => ({ ...prev, name: undefined }));
+              }
+            }} 
           />
+          {validationErrors.name && (
+            <Text style={styles.errorText}>{validationErrors.name}</Text>
+          )}
           <View style={styles.readOnlyContainer}>
             <Text style={styles.readOnlyLabel}>NGO Name *</Text>
-            <TextInput 
-              style={[styles.input, styles.readOnlyInput]} 
-              value={eventData.ngoName || (profileLoading ? "Loading from profile..." : "No profile found")} 
-              editable={false}
-              placeholder="Loading from profile..."
-            />
+            <View style={styles.ngoNameContainer}>
+              <TextInput 
+                style={[styles.input, styles.readOnlyInput]} 
+                value={eventData.ngoName || (profileLoading ? "Loading from profile..." : "No profile found")} 
+                editable={false}
+                placeholder="Loading from profile..."
+              />
+              {profileLoading && (
+                <ActivityIndicator 
+                  size="small" 
+                  color="#2196f3" 
+                  style={styles.loadingIndicator}
+                />
+              )}
+            </View>
+            {!profileLoading && !eventData.ngoName && (
+              <Text style={styles.profileHint}>
+                Please create your NGO profile first or refresh to load it
+              </Text>
+            )}
           </View>
           <TextInput 
-            style={[styles.input, { height: 80 }]} 
+            style={[styles.input, { height: 80 }, validationErrors.description && styles.inputError]} 
             placeholder="Activity Description *" 
             multiline 
             value={eventData.description} 
-            onChangeText={(v) => handleChange("description", v)} 
+            onChangeText={(v) => {
+              handleChange("description", v);
+              if (validationErrors.description) {
+                setValidationErrors(prev => ({ ...prev, description: undefined }));
+              }
+            }} 
           />
+          {validationErrors.description && (
+            <Text style={styles.errorText}>{validationErrors.description}</Text>
+          )}
         </View>
 
         {/* Event Details */}
@@ -518,21 +708,30 @@ const NGOEventForm = () => {
           </View>
 
           {/* Slots Picker */}
+          <Text style={styles.label}>Number of Slots *</Text>
           <TouchableOpacity 
-            style={styles.pickerButton} 
+            style={[styles.pickerButton, validationErrors.slots && styles.inputError]} 
             onPress={() => setShowSlotsPicker(true)}
           >
             <Text style={styles.pickerButtonText}>
-              👥 {eventData.slots} slot{eventData.slots !== 1 ? 's' : ''}
+              👥 {eventData.slots === 'unlimited' ? 'Unlimited slots' : `${eventData.slots} slot${eventData.slots !== 1 ? 's' : ''}`}
             </Text>
           </TouchableOpacity>
+          {validationErrors.slots && (
+            <Text style={styles.errorText}>{validationErrors.slots}</Text>
+          )}
 
           <View style={styles.locationContainer}>
           <TextInput 
-              style={styles.locationInput} 
+              style={[styles.locationInput, validationErrors.location && styles.inputError]} 
             placeholder="Location *" 
             value={eventData.location} 
-            onChangeText={(v) => handleChange("location", v)} 
+            onChangeText={(v) => {
+              handleChange("location", v);
+              if (validationErrors.location) {
+                setValidationErrors(prev => ({ ...prev, location: undefined }));
+              }
+            }} 
           />
             <TouchableOpacity 
               style={[styles.locationButton, isGettingLocation && styles.locationButtonDisabled]} 
@@ -546,6 +745,9 @@ const NGOEventForm = () => {
               )}
             </TouchableOpacity>
           </View>
+          {validationErrors.location && (
+            <Text style={styles.errorText}>{validationErrors.location}</Text>
+          )}
 
           {/* District */}
           <Text style={styles.sectionTitle}>District *</Text>
@@ -560,6 +762,9 @@ const NGOEventForm = () => {
               </TouchableOpacity>
             ))}
           </View>
+          {validationErrors.district && (
+            <Text style={styles.errorText}>{validationErrors.district}</Text>
+          )}
         </View>
 
         {/* Materials and Requirements */}
@@ -612,6 +817,9 @@ const NGOEventForm = () => {
           </TouchableOpacity>
         ))}
           </View>
+          {validationErrors.clientGroup && (
+            <Text style={styles.errorText}>{validationErrors.clientGroup}</Text>
+          )}
       </View>
 
         {/* Languages */}
@@ -628,6 +836,9 @@ const NGOEventForm = () => {
           </TouchableOpacity>
         ))}
           </View>
+          {validationErrors.languages && (
+            <Text style={styles.errorText}>{validationErrors.languages}</Text>
+          )}
       </View>
 
         {/* Activity Type and Difficulty */}
@@ -644,6 +855,9 @@ const NGOEventForm = () => {
           </TouchableOpacity>
         ))}
           </View>
+          {validationErrors.activityType && (
+            <Text style={styles.errorText}>{validationErrors.activityType}</Text>
+          )}
           
           <Text style={styles.label}>Difficulty Level</Text>
           <View style={styles.optionsContainer}>
@@ -673,10 +887,24 @@ const NGOEventForm = () => {
           </TouchableOpacity>
         ))}
           </View>
+          {validationErrors.transport && (
+            <Text style={styles.errorText}>{validationErrors.transport}</Text>
+          )}
       </View>
 
-      <TouchableOpacity style={styles.button} onPress={handleSubmit}>
+      <TouchableOpacity 
+        style={[styles.button, isSubmitting && styles.buttonDisabled]} 
+        onPress={handleSubmit}
+        disabled={isSubmitting}
+      >
+        {isSubmitting ? (
+          <View style={styles.buttonLoading}>
+            <ActivityIndicator size="small" color="#fff" />
+            <Text style={styles.buttonText}>Creating Event...</Text>
+          </View>
+        ) : (
           <Text style={styles.buttonText}>Create Event</Text>
+        )}
       </TouchableOpacity>
     </ScrollView>
 
@@ -710,12 +938,20 @@ const NGOEventForm = () => {
             selectedValue={eventData.slots}
             onValueChange={(value) => {
               handleChange('slots', value);
+              // Clear validation error when user selects a value
+              if (validationErrors.slots) {
+                setValidationErrors(prev => ({ ...prev, slots: undefined }));
+              }
               setShowSlotsPicker(false);
             }}
             style={styles.picker}
           >
-            {slotsOptions.map((slot) => (
-              <Picker.Item key={slot} label={`${slot} slot${slot !== 1 ? 's' : ''}`} value={slot} />
+            {slotsOptions.map((slot, index) => (
+              <Picker.Item 
+                key={index} 
+                label={typeof slot === 'object' ? slot.label : `${slot} slot${slot !== 1 ? 's' : ''}`} 
+                value={typeof slot === 'object' ? slot.value : slot} 
+              />
             ))}
           </Picker>
           <TouchableOpacity 
@@ -848,12 +1084,22 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 20,
   },
+  headerContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 24,
+  },
   header: {
     fontSize: 28,
     fontWeight: "bold",
-    marginBottom: 24,
-    textAlign: "center",
     color: "#333",
+    flex: 1,
+  },
+  refreshButton: {
+    padding: 8,
+    borderRadius: 20,
+    backgroundColor: '#f0f0f0',
   },
   section: {
     backgroundColor: "#fff",
@@ -929,6 +1175,15 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontWeight: "bold",
     fontSize: 16,
+  },
+  buttonDisabled: {
+    backgroundColor: "#ccc",
+    opacity: 0.7,
+  },
+  buttonLoading: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 
   // Picker Styles
@@ -1232,5 +1487,31 @@ const styles = StyleSheet.create({
     backgroundColor: "#f8f9fa",
     borderColor: "#e9ecef",
     color: "#495057",
+    flex: 1,
+  },
+  ngoNameContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  loadingIndicator: {
+    marginLeft: 8,
+  },
+  profileHint: {
+    fontSize: 12,
+    color: '#ff6b6b',
+    marginTop: 4,
+    fontStyle: 'italic',
+  },
+
+  // Validation Styles
+  inputError: {
+    borderColor: '#ff6b6b',
+    borderWidth: 2,
+  },
+  errorText: {
+    color: '#ff6b6b',
+    fontSize: 12,
+    marginTop: 4,
+    marginLeft: 4,
   },
 });

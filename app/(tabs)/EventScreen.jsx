@@ -42,19 +42,33 @@ const isEventCompleted = (eventDate) => {
 
 const EventCard = ({ event, onPress }) => {
   const isCompleted = isEventCompleted(event.date);
+  const isClosed = event.status === 'closed';
   
   const getSpotsLeft = () => {
     const enrolled = event.enrolledCount || 0;
+    if (event.slots === 'unlimited') {
+      return 'unlimited';
+    }
     const total = parseInt(event.slots) || 0;
     return total - enrolled;
   };
 
   const getSpotsBadgeColor = () => {
     if (isCompleted) return '#6c757d'; // Gray for completed events
+    if (isClosed) return '#ff9800'; // Orange for closed events
     const spotsLeft = getSpotsLeft();
+    if (spotsLeft === 'unlimited') return '#4caf50'; // Green for unlimited
     if (spotsLeft <= 2) return '#ff4444';
     if (spotsLeft <= 5) return '#ffaa00';
     return '#44aa44';
+  };
+
+  const getSpotsText = () => {
+    if (isCompleted) return 'Event Over';
+    if (isClosed) return 'Registration Closed';
+    const spotsLeft = getSpotsLeft();
+    if (spotsLeft === 'unlimited') return 'Unlimited spots';
+    return `${spotsLeft} spots left`;
   };
 
   return (
@@ -68,7 +82,7 @@ const EventCard = ({ event, onPress }) => {
           </View>
           <View style={[styles.spotsBadge, { backgroundColor: getSpotsBadgeColor() }]}>
             <Text style={styles.spotsText}>
-              {isCompleted ? 'Event Over' : `${getSpotsLeft()} spots left`}
+              {getSpotsText()}
             </Text>
           </View>
         </View>
@@ -213,6 +227,25 @@ const EventList = () => {
       return;
     }
 
+    // Find the event to check its status
+    const event = events.find(e => e.id === eventId);
+    if (!event) {
+      Alert.alert("Error", "Event not found.");
+      return;
+    }
+
+    // Check if event is closed
+    if (event.status === 'closed') {
+      Alert.alert("Registration Closed", "This event is no longer accepting new registrations.");
+      return;
+    }
+
+    // Check if event is completed
+    if (isEventCompleted(event.date)) {
+      Alert.alert("Event Completed", "This event has already taken place.");
+      return;
+    }
+
     // Check if already registered
     if (registeredEvents.has(eventId)) {
       Alert.alert("Notice", "You have already registered for this event.");
@@ -242,14 +275,26 @@ const EventList = () => {
 
       const eventData = eventSnap.data();
 
+      // Check if event is closed
+      if (eventData.status === 'closed') {
+        Alert.alert("Registration Closed", "This event is no longer accepting new registrations.");
+        return;
+      }
+
+      // Check if event is completed
+      if (isEventCompleted(eventData.date)) {
+        Alert.alert("Event Completed", "This event has already taken place.");
+        return;
+      }
+
       // Check if already registered
       if (eventData.registeredUsers?.includes(userId)) {
         Alert.alert("Notice", "You have already registered for this event.");
         return;
       }
 
-      // Check if slots available
-      if (eventData.enrolledCount >= eventData.slots) {
+      // Check if slots available (skip check for unlimited slots)
+      if (eventData.slots !== 'unlimited' && eventData.enrolledCount >= eventData.slots) {
         Alert.alert("Full", "No spots left.");
         return;
       }
@@ -515,32 +560,63 @@ const EventList = () => {
                   <Text style={styles.registrationSubtitle}>Registration is free and takes less than 2 minutes</Text>
                   
                   <View style={styles.availabilityContainer}>
-                    <Text style={styles.availabilityText}>
-                      {(selectedEvent.slots - (selectedEvent.enrolledCount || 0))} spots left
-              </Text>
-                    <Text style={styles.availabilitySubtext}>out of {selectedEvent.slots} total</Text>
+                    <Text style={[
+                      styles.availabilityText,
+                      selectedEvent.status === 'closed' && styles.closedAvailabilityText,
+                      isEventCompleted(selectedEvent.date) && styles.completedAvailabilityText
+                    ]}>
+                      {selectedEvent.status === 'closed' 
+                        ? 'Registration Closed' 
+                        : isEventCompleted(selectedEvent.date)
+                        ? 'Event Completed'
+                        : selectedEvent.slots === 'unlimited'
+                        ? 'Unlimited spots available'
+                        : `${(selectedEvent.slots - (selectedEvent.enrolledCount || 0))} spots left`
+                      }
+                    </Text>
+                    <Text style={styles.availabilitySubtext}>
+                      {selectedEvent.status === 'closed' 
+                        ? 'No new registrations accepted' 
+                        : isEventCompleted(selectedEvent.date)
+                        ? 'This event has already taken place'
+                        : selectedEvent.slots === 'unlimited'
+                        ? 'No limit on registrations'
+                        : `out of ${selectedEvent.slots} total`
+                      }
+                    </Text>
                   </View>
 
                   <View style={styles.progressBar}>
                     <View style={[
                       styles.progressFill, 
-                      { width: `${((selectedEvent.enrolledCount || 0) / selectedEvent.slots) * 100}%` }
+                      { 
+                        width: selectedEvent.slots === 'unlimited' 
+                          ? '0%' 
+                          : `${((selectedEvent.enrolledCount || 0) / selectedEvent.slots) * 100}%` 
+                      }
                     ]} />
                   </View>
 
                   <TouchableOpacity 
                     style={[
                       styles.registerButton,
-                      registeredEvents.has(selectedEvent.id) && styles.registeredButton
+                      (registeredEvents.has(selectedEvent.id) || selectedEvent.status === 'closed' || isEventCompleted(selectedEvent.date)) && styles.registeredButton
                     ]}
                     onPress={() => handleRegisterClick(selectedEvent.id)}
-                    disabled={registeredEvents.has(selectedEvent.id)}
+                    disabled={registeredEvents.has(selectedEvent.id) || selectedEvent.status === 'closed' || isEventCompleted(selectedEvent.date)}
                   >
                     <Text style={[
                       styles.registerButtonText,
-                      registeredEvents.has(selectedEvent.id) && styles.registeredButtonText
+                      (registeredEvents.has(selectedEvent.id) || selectedEvent.status === 'closed' || isEventCompleted(selectedEvent.date)) && styles.registeredButtonText
                     ]}>
-                      {registeredEvents.has(selectedEvent.id) ? 'Already Registered' : 'Register for This Class'}
+                      {registeredEvents.has(selectedEvent.id) 
+                        ? 'Already Registered' 
+                        : selectedEvent.status === 'closed' 
+                        ? 'Registration Closed' 
+                        : isEventCompleted(selectedEvent.date)
+                        ? 'Event Completed'
+                        : 'Register for This Class'
+                      }
                     </Text>
                   </TouchableOpacity>
                   
@@ -1049,6 +1125,12 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: "bold",
     color: "#4caf50",
+  },
+  closedAvailabilityText: {
+    color: "#ff9800",
+  },
+  completedAvailabilityText: {
+    color: "#6c757d",
   },
   availabilitySubtext: {
     fontSize: 14,

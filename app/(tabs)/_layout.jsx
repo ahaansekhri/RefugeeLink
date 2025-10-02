@@ -13,6 +13,8 @@ import { ActivityIndicator, Alert, View } from "react-native";
 import AboutScreen from "./AboutScreen";
 import AddEvent from "./AddEvent";
 import EventScreen from "./EventScreen";
+import ManageEventsScreen from "./ManageEventsScreen";
+import MyEventsScreen from "./MyEventsScreen";
 import NGOProfile from "./NGOProfile";
 import NGOScreen from "./NGOScreen";
 import LoginRegister from "./index";
@@ -43,6 +45,8 @@ const RefugeeTabs = () => {
             iconName = focused ? "information-circle" : "information-circle-outline";
           } else if (route.name === "Event") {
             iconName = focused ? "calendar" : "calendar-outline";
+          } else if (route.name === "My Events") {
+            iconName = focused ? "bookmark" : "bookmark-outline";
           } else if (route.name === "NGO") {
             iconName = focused ? "people" : "people-outline";
           }
@@ -52,6 +56,7 @@ const RefugeeTabs = () => {
     >
       <Tab.Screen name="About" component={AboutScreen} />
       <Tab.Screen name="Event" component={EventScreen} />
+      <Tab.Screen name="My Events" component={MyEventsScreen} />
       <Tab.Screen name="NGO" component={NGOScreen} />
     </Tab.Navigator>
   );
@@ -74,6 +79,8 @@ const NGOTabs = () => {
             iconName = focused ? "add-circle" : "add-circle-outline";
           } else if (route.name === "Profile") {
             iconName = focused ? "person" : "person-outline";
+          } else if (route.name === "Manage Events") {
+            iconName = focused ? "settings" : "settings-outline";
           } else {
             iconName = "ellipse";
           }
@@ -83,6 +90,7 @@ const NGOTabs = () => {
     >
       <Tab.Screen name="Profile" component={NGOProfile} />
       <Tab.Screen name="Add Event" component={AddEvent} />
+      <Tab.Screen name="Manage Events" component={ManageEventsScreen} />
       
     </Tab.Navigator>
   );
