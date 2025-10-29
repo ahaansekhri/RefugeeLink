@@ -473,12 +473,12 @@ export default function AuthPage() {
                 >
                   <Text style={[styles.roleText, role === 'refugee' && styles.selectedRoleText]}>Refugee</Text>
                 </TouchableOpacity>
-                <TouchableOpacity 
+                {/* <TouchableOpacity 
                   onPress={() => setRole('ngo')} 
                   style={[styles.roleOption, role === 'ngo' && styles.selectedRole]}
                 >
                   <Text style={[styles.roleText, role === 'ngo' && styles.selectedRoleText]}>NGO</Text>
-                </TouchableOpacity>
+                </TouchableOpacity> */}
               </View>
             </View>
 
