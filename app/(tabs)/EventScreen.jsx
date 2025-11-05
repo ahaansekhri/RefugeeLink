@@ -1,3 +1,4 @@
+import { useNavigation } from "@react-navigation/native";
 import {
   arrayUnion,
   collection,
@@ -119,6 +120,7 @@ const EventCard = ({ event, onPress }) => {
 };
 
 const EventList = () => {
+  const navigation = useNavigation();
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -126,6 +128,7 @@ const EventList = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [showFilters, setShowFilters] = useState(false);
   const [showConfirmationModal, setShowConfirmationModal] = useState(false);
+  const [showRegistrationRequiredModal, setShowRegistrationRequiredModal] = useState(false);
   const [eventToRegister, setEventToRegister] = useState(null);
   const [registeredEvents, setRegisteredEvents] = useState(new Set());
   const [filters, setFilters] = useState({
@@ -223,7 +226,7 @@ const EventList = () => {
   const handleRegisterClick = (eventId) => {
     const userId = auth.currentUser?.uid;
     if (!userId) {
-      Alert.alert("Error", "You must be logged in to register.");
+      setShowRegistrationRequiredModal(true);
       return;
     }
 
@@ -261,7 +264,9 @@ const EventList = () => {
     try {
       const userId = auth.currentUser?.uid;
       if (!userId || !eventToRegister) {
-        Alert.alert("Error", "You must be logged in to register.");
+        setShowConfirmationModal(false);
+        setEventToRegister(null);
+        setShowRegistrationRequiredModal(true);
         return;
       }
 
@@ -691,6 +696,41 @@ const EventList = () => {
                 onPress={confirmRegistration}
               >
                 <Text style={styles.confirmButtonText}>Register</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Registration Required Modal */}
+      <Modal
+        visible={showRegistrationRequiredModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowRegistrationRequiredModal(false)}
+      >
+        <View style={styles.confirmationOverlay}>
+          <View style={styles.confirmationModal}>
+            <Text style={styles.confirmationTitle}>Registration Required</Text>
+            <Text style={styles.confirmationMessage}>
+              You need to create an account or log in to register for classes. Please register or log in first.
+            </Text>
+            <View style={styles.confirmationButtons}>
+              <TouchableOpacity 
+                style={styles.cancelButton}
+                onPress={() => setShowRegistrationRequiredModal(false)}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.confirmButton}
+                onPress={() => {
+                  setShowRegistrationRequiredModal(false);
+                  // Navigate to the LoginRegister screen at the root Stack level
+                  navigation.replace("LoginRegister");
+                }}
+              >
+                <Text style={styles.confirmButtonText}>Go to Login</Text>
               </TouchableOpacity>
             </View>
           </View>

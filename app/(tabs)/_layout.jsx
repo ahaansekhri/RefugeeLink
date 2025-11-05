@@ -118,6 +118,16 @@ const DrawerNavigator = ({ role }) => {
         options={{ title: 'Home' }}
       />
       <Drawer.Screen
+        name="LoginRegister"
+        component={LoginRegister}
+        options={{
+          title: 'Login / Register',
+          drawerIcon: ({ color, size }) => (
+            <Ionicons name="person-outline" size={size} color={color} />
+          ),
+        }}
+      />
+      <Drawer.Screen
         name="Logout"
         component={View} // dummy component
         options={{
@@ -190,8 +200,12 @@ export default function StackLayout() {
             {() => <DrawerNavigator role={role} />}
           </Stack.Screen>
         ) : (
-          <Stack.Screen name="LoginRegister" component={LoginRegister} />
+          <Stack.Screen name="Drawer">
+            {() => <DrawerNavigator role={role} />}
+          </Stack.Screen>
         )}
+        <Stack.Screen name="LoginRegister" component={LoginRegister} />
+
       </Stack.Navigator>
   );
 }
