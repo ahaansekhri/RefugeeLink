@@ -28,7 +28,7 @@ const Tab = createBottomTabNavigator();
 const Drawer = createDrawerNavigator();
 const db = getFirestore();
 
-const RefugeeTabs = () => {
+const JusticeTabs = () => {
   const colorScheme = useColorScheme();
   return (
     <Tab.Navigator
@@ -114,7 +114,7 @@ const DrawerNavigator = ({ role }) => {
     <Drawer.Navigator initialRouteName="MainTabs">
       <Drawer.Screen
         name="MainTabs"
-        component={role === 'ngo' ? NGOTabs : RefugeeTabs}
+        component={role === 'ngo' ? NGOTabs : JusticeTabs}
         options={{ title: 'Home' }}
       />
       <Drawer.Screen

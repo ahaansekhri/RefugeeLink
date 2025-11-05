@@ -243,7 +243,7 @@ const NGOEventForm = () => {
           PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
           {
             title: 'Location Permission',
-            message: 'RefugeeLink needs access to your location to help you set the event location.',
+            message: 'JusticeLink needs access to your location to help you set the event location.',
             buttonNeutral: 'Ask Me Later',
             buttonNegative: 'Cancel',
             buttonPositive: 'OK',

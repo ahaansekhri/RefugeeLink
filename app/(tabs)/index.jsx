@@ -228,7 +228,7 @@ export default function AuthPage() {
         role: role,
       });
       setIsLoading(false);
-      showModalMessage('success', 'Registration Successful', `Welcome to RefugeeLink, ${registerName.trim()}! Your account has been created successfully.`);
+      showModalMessage('success', 'Registration Successful', `Welcome to JusticeLink, ${registerName.trim()}! Your account has been created successfully.`);
     } catch (error) {
       setIsLoading(false);
       let errorMessage = 'Registration failed. Please try again.';
@@ -317,7 +317,7 @@ export default function AuthPage() {
             />
           </View>
         </View>
-        <Text style={[styles.title, isDarkMode && { color: '#fff' }]}>RefugeeLink</Text>
+        <Text style={[styles.title, isDarkMode && { color: '#fff' }]}>JusticeLink</Text>
         <Text style={[styles.subtitle, isDarkMode && { color: '#ccc' }]}>Connecting refugees with support services</Text>
 
         <View style={styles.tabContainer}>

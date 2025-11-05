@@ -72,7 +72,7 @@ const AboutScreen = () => {
 
       {/* Features Section */}
       <View style={styles.featuresSection}>
-        <Text style={styles.sectionTitle}>Why Choose RefugeeLink?</Text>
+        <Text style={styles.sectionTitle}>Why Choose JusticeLink?</Text>
         <View style={styles.featuresGrid}>
           {features.map((feature, index) => (
             <View key={index} style={styles.featureCard}>
@@ -86,9 +86,9 @@ const AboutScreen = () => {
 
       {/* About Section */}
       <View style={styles.aboutSection}>
-        <Text style={styles.sectionTitle}>About RefugeeLink</Text>
+        <Text style={styles.sectionTitle}>About JusticeLink</Text>
         <Text style={styles.aboutText}>
-          RefugeeLink is a comprehensive platform designed to bridge the gap between refugees, asylum seekers, and the community services available in Hong Kong. Our mission is to empower individuals through education, skill development, and community integration.
+          JusticeLink is a comprehensive platform designed to bridge the gap between refugees, asylum seekers, and the community services available in Hong Kong. Our mission is to empower individuals through education, skill development, and community integration.
         </Text>
         <Text style={styles.aboutText}>
           We partner with trusted NGOs across Hong Kong to provide free access to educational programs, vocational training, language classes, and community support services. Our platform makes it easy to discover, register for, and participate in programs that can help build a brighter future.
@@ -133,7 +133,7 @@ const AboutScreen = () => {
       <View style={styles.ctaSection}>
         <Text style={styles.ctaTitle}>Ready to Start Your Journey?</Text>
         <Text style={styles.ctaDescription}>
-          Join thousands of participants who are already building their future with RefugeeLink
+          Join thousands of participants who are already building their future with JusticeLink
         </Text>
         <TouchableOpacity style={styles.ctaButton} onPress={() => navigation.navigate('Events')}>
           <Text style={styles.ctaButtonText}>Explore Events</Text>
@@ -142,7 +142,7 @@ const AboutScreen = () => {
 
       {/* Footer */}
       <View style={styles.footer}>
-        <Text style={styles.footerText}>© 2024 RefugeeLink. Empowering communities through education.</Text>
+        <Text style={styles.footerText}>© 2024 JusticeLink. Empowering communities through education.</Text>
       </View>
     </ScrollView>
   );
