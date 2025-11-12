@@ -397,7 +397,7 @@ const EventList = () => {
           },
           {
             label: "District",
-            options: ["Wan Chai", "Causeway Bay", "Tsim Tsa Tsui", "Mong Kok"],
+            options: ["Central and Western", "Eastern", "Southern", "Wan Chai", "Kowloon City", "Kwun Tong", "Sham Shui Po", "Wong Tai Sin", "Eastern", "Yau Tsim Mong", "Islands", "Kwai Tsing", "North", "Sai Kung", "Sha Tin", "Tai Po", "Tsuen Wan", "Tuen Mun", "Yuen Long"],
             field: "district",
           },
           {

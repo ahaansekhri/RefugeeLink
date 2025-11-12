@@ -26,7 +26,7 @@ const isWeb = Platform.OS === 'web';
 const clientGroups = ["Refugees", "Asylum Seekers", "General Public", "Clients Only"];
 const activityClasses = ["Education", "Skill Building", "Legal", "Health & Wellbeing", "Tech Skills"];
 const languages = ["English", "Cantonese", "Urdu", "Arabic", "Mandarin", "Somali", "French"];
-const districts = ["Wan Chai", "Causeway Bay", "Tsim Tsa Tsui", "Mong Kok"];
+const districts = ["Central and Western", "Eastern", "Southern", "Wan Chai", "Kowloon City", "Kwun Tong", "Sham Shui Po", "Wong Tai Sin", "Eastern", "Yau Tsim Mong", "Islands", "Kwai Tsing", "North", "Sai Kung", "Sha Tin", "Tai Po", "Tsuen Wan", "Tuen Mun", "Yuen Long"];
 const transportOptions = [
   "Provided to all immigration paper (Form 8) holders",
   "Registered members of the NGO",

@@ -1,13 +1,13 @@
 import { useNavigation } from '@react-navigation/native';
 import React from 'react';
 import {
-    Dimensions,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  Dimensions,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
 
 const { width: screenWidth } = Dimensions.get('window');
@@ -40,10 +40,10 @@ const AboutScreen = () => {
   ];
 
   const stats = [
-    { number: '50+', label: 'Partner NGOs' },
-    { number: '200+', label: 'Events Monthly' },
-    { number: '1000+', label: 'Participants' },
-    { number: '15+', label: 'Languages' }
+    { number: 'x+', label: 'Partner NGOs' },
+    { number: 'x+', label: 'Events Monthly' },
+    { number: 'x+', label: 'Participants' },
+    { number: 'x+', label: 'Languages' }
   ];
 
   return (
