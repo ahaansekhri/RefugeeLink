@@ -2,13 +2,13 @@
 
 import { Ionicons } from "@expo/vector-icons";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
-import { createDrawerNavigator } from '@react-navigation/drawer';
+import { createDrawerNavigator, DrawerContentScrollView, DrawerItemList } from '@react-navigation/drawer';
 import { useNavigation } from "@react-navigation/native";
 import { createStackNavigator } from "@react-navigation/stack";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { doc, getDoc, getFirestore } from "firebase/firestore";
 import React, { useEffect, useState } from "react";
-import { ActivityIndicator, Alert, View } from "react-native";
+import { ActivityIndicator, Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 import AboutScreen from "./AboutScreen";
 import AddEvent from "./AddEvent";
@@ -96,8 +96,12 @@ const NGOTabs = () => {
   );
 };
 
-const DrawerNavigator = ({ role }) => {
+// Custom Drawer Content Component
+const CustomDrawerContent = ({ role, user, userData, ...props }) => {
   const navigation = useNavigation();
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === 'dark';
+  const colors = Colors[colorScheme ?? "light"];
 
   const handleLogout = () => {
     signOut(auth)
@@ -110,39 +114,157 @@ const DrawerNavigator = ({ role }) => {
       });
   };
 
+  const handleLoginRegisterPress = () => {
+    if (!user) {
+      navigation.navigate("LoginRegister");
+    }
+  };
+
+  // Get user initials for avatar
+  const getUserInitials = () => {
+    if (user && userData) {
+      const name = userData.name || user.displayName || 'User';
+      return name
+        .split(' ')
+        .map(n => n[0])
+        .join('')
+        .toUpperCase()
+        .slice(0, 2);
+    }
+    return '?';
+  };
+
   return (
-    <Drawer.Navigator initialRouteName="MainTabs">
+    <DrawerContentScrollView
+      {...props}
+      contentContainerStyle={[
+        styles.drawerContent,
+        { backgroundColor: colors.background }
+      ]}
+    >
+      {/* User Info Header */}
+      <View style={[
+        styles.userHeader,
+        { backgroundColor: isDark ? '#1a1a1a' : '#007bff' }
+      ]}>
+        <TouchableOpacity
+          onPress={handleLoginRegisterPress}
+          activeOpacity={0.8}
+          style={styles.userInfoContainer}
+        >
+          {user && userData ? (
+            <>
+              <View style={[
+                styles.avatarContainer,
+                { backgroundColor: isDark ? '#2d2d2d' : '#0056b3' }
+              ]}>
+                <Text style={styles.avatarText}>{getUserInitials()}</Text>
+              </View>
+              <View style={styles.userTextContainer}>
+                <Text style={styles.userName} numberOfLines={1}>
+                  {userData.name || user.displayName || 'User'}
+                </Text>
+                <Text style={styles.userEmail} numberOfLines={1}>
+                  {userData.email || user.email || ''}
+                </Text>
+              </View>
+            </>
+          ) : (
+            <>
+              <View style={[
+                styles.avatarContainer,
+                { backgroundColor: isDark ? '#2d2d2d' : '#0056b3' }
+              ]}>
+                <Ionicons name="person-outline" size={28} color="#fff" />
+              </View>
+              <View style={styles.userTextContainer}>
+                <Text style={styles.userName}>Login / Register</Text>
+                <Text style={styles.userEmail}>Tap to sign in</Text>
+              </View>
+            </>
+          )}
+        </TouchableOpacity>
+      </View>
+
+      {/* Drawer Items */}
+      <View style={styles.drawerItems}>
+        <DrawerItemList {...props} />
+      </View>
+
+      {/* Logout Button */}
+      {user && (
+        <View style={styles.logoutContainer}>
+          <TouchableOpacity
+            style={[
+              styles.logoutButton,
+              { backgroundColor: isDark ? '#2d2d2d' : '#f8f9fa' }
+            ]}
+            onPress={handleLogout}
+            activeOpacity={0.7}
+          >
+            <Ionicons
+              name="log-out-outline"
+              size={22}
+              color={isDark ? '#ff4444' : '#dc3545'}
+            />
+            <Text style={[
+              styles.logoutText,
+              { color: isDark ? '#ff4444' : '#dc3545' }
+            ]}>
+              Logout
+            </Text>
+          </TouchableOpacity>
+        </View>
+      )}
+    </DrawerContentScrollView>
+  );
+};
+
+const DrawerNavigator = ({ role, user, userData }) => {
+  const colorScheme = useColorScheme();
+  const colors = Colors[colorScheme ?? "light"];
+
+  return (
+    <Drawer.Navigator
+      initialRouteName="MainTabs"
+      drawerContent={(props) => (
+        <CustomDrawerContent
+          {...props}
+          role={role}
+          user={user}
+          userData={userData}
+        />
+      )}
+      screenOptions={{
+        drawerActiveTintColor: colors.tint,
+        drawerInactiveTintColor: colors.icon,
+        drawerStyle: {
+          backgroundColor: colors.background,
+        },
+      }}
+    >
       <Drawer.Screen
         name="MainTabs"
         component={role === 'ngo' ? NGOTabs : JusticeTabs}
-        options={{ title: 'Home' }}
-      />
-      <Drawer.Screen
-        name="LoginRegister"
-        component={LoginRegister}
         options={{
-          title: 'Login / Register',
+          title: 'Home',
           drawerIcon: ({ color, size }) => (
-            <Ionicons name="person-outline" size={size} color={color} />
+            <Ionicons name="home-outline" size={size} color={color} />
           ),
         }}
       />
-      <Drawer.Screen
-        name="Logout"
-        component={View} // dummy component
-        options={{
-          title: 'Logout',
-          drawerIcon: ({ color, size }) => (
-            <Ionicons name="log-out-outline" size={size} color={color} />
-          ),
-        }}
-        listeners={{
-          drawerItemPress: (e) => {
-            e.preventDefault();
-            handleLogout();
-          },
-        }}
-      />
+      {!user && (
+        <Drawer.Screen
+          name="LoginRegister"
+          component={LoginRegister}
+          options={{
+            title: 'Login / Register',
+            drawerIcon: ({ color, size }) => (
+              <Ionicons name="person-outline" size={size} color={color} />
+            ),
+          }}
+        />
+      )}
     </Drawer.Navigator>
   );
 };
@@ -152,6 +274,7 @@ export default function StackLayout() {
   const [loading, setLoading] = useState(true);
   const [role, setRole] = useState(null);
   const [user, setUser] = useState(null);
+  const [userData, setUserData] = useState(null);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
@@ -161,15 +284,30 @@ export default function StackLayout() {
           const docRef = doc(db, "users", currentUser.uid);
           const docSnap = await getDoc(docRef);
           if (docSnap.exists()) {
-            setRole(docSnap.data().role);
+            const data = docSnap.data();
+            setRole(data.role);
+            setUserData({
+              name: data.name || currentUser.displayName || '',
+              email: data.email || currentUser.email || '',
+            });
           } else {
             setRole(null);
+            setUserData({
+              name: currentUser.displayName || '',
+              email: currentUser.email || '',
+            });
           }
         } catch (error) {
-          console.error("Error fetching role:", error);
+          console.error("Error fetching user data:", error);
+          setRole(null);
+          setUserData({
+            name: currentUser.displayName || '',
+            email: currentUser.email || '',
+          });
         }
       } else {
         setRole(null);
+        setUserData(null);
       }
       setLoading(false);
     });
@@ -195,17 +333,80 @@ export default function StackLayout() {
           },
         }}
       >
-        {user ? (
-          <Stack.Screen name="Drawer">
-            {() => <DrawerNavigator role={role} />}
-          </Stack.Screen>
-        ) : (
-          <Stack.Screen name="Drawer">
-            {() => <DrawerNavigator role={role} />}
-          </Stack.Screen>
-        )}
+        <Stack.Screen name="Drawer">
+          {() => <DrawerNavigator role={role} user={user} userData={userData} />}
+        </Stack.Screen>
         <Stack.Screen name="LoginRegister" component={LoginRegister} />
 
       </Stack.Navigator>
   );
 }
+
+const styles = StyleSheet.create({
+  drawerContent: {
+    flex: 1,
+  },
+  userHeader: {
+    paddingTop: 50,
+    paddingBottom: 20,
+    paddingHorizontal: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  userInfoContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  avatarContainer: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  avatarText: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#fff',
+  },
+  userTextContainer: {
+    flex: 1,
+  },
+  userName: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#fff',
+    marginBottom: 4,
+  },
+  userEmail: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.8)',
+  },
+  drawerItems: {
+    flex: 1,
+    paddingTop: 10,
+  },
+  logoutContainer: {
+    padding: 20,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(0, 0, 0, 0.1)',
+  },
+  logoutButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    gap: 12,
+  },
+  logoutText: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+});
