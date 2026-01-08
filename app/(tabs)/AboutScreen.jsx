@@ -135,7 +135,7 @@ const AboutScreen = () => {
         <Text style={styles.ctaDescription}>
           Join thousands of participants who are already building their future with JusticeLink
         </Text>
-        <TouchableOpacity style={styles.ctaButton} onPress={() => navigation.navigate('Events')}>
+        <TouchableOpacity style={styles.ctaButton} onPress={() => navigation.navigate('Event')}>
           <Text style={styles.ctaButtonText}>Explore Events</Text>
         </TouchableOpacity>
       </View>
