@@ -1,13 +1,13 @@
 import { useNavigation } from '@react-navigation/native';
 import React from 'react';
 import {
-    Dimensions,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  Dimensions,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
 
 const { width: screenWidth } = Dimensions.get('window');
@@ -39,36 +39,20 @@ const AboutScreen = () => {
     }
   ];
 
-  const stats = [
-    { number: '50+', label: 'Partner NGOs' },
-    { number: '200+', label: 'Events Monthly' },
-    { number: '1000+', label: 'Participants' },
-    { number: '15+', label: 'Languages' }
-  ];
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       {/* Hero Section */}
       <View style={styles.heroSection}>
+        <Text style={styles.heroBrand}>Justice Link</Text>
         <View style={styles.heroContent}>
-          <Text style={styles.heroTitle}>Discover Learning Opportunities in Hong Kong</Text>
+          <Text style={styles.heroTitle}>Discover Learning Opportunities for Refugees and Asylum Seekers</Text>
           <Text style={styles.heroDescription}>
             Connect with NGOs offering free skill-building classes, workshops, and training programs. Build your future, one skill at a time.
           </Text>
         </View>
       </View>
 
-      {/* Stats Section */}
-      <View style={styles.statsSection}>
-        <View style={styles.statsContainer}>
-          {stats.map((stat, index) => (
-            <View key={index} style={styles.statItem}>
-              <Text style={styles.statNumber}>{stat.number}</Text>
-              <Text style={styles.statLabel}>{stat.label}</Text>
-            </View>
-          ))}
-        </View>
-      </View>
 
       {/* Features Section */}
       <View style={styles.featuresSection}>
@@ -154,10 +138,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#f8f9fa',
   },
   
-  // Hero Section
+
+
   heroSection: {
     backgroundColor: '#e3f2fd',
-    paddingVertical: isWeb ? 80 : 60,
+    paddingVertical: isWeb ? 100 : 80,
     paddingHorizontal: isWeb ? 40 : 20,
     alignItems: 'center',
     ...(isWeb && {
@@ -169,13 +154,25 @@ const styles = StyleSheet.create({
     maxWidth: isWeb ? 800 : '100%',
     alignItems: 'center',
   },
+  heroBrand: {
+    position: 'absolute',
+    top: isWeb ? 20 : 12,
+    alignSelf: 'center',
+    fontSize: isWeb ? 72 : 48,
+    color: '#1a365d',
+    fontWeight: '900',
+    marginBottom: 8,
+    letterSpacing: 2,
+    zIndex: 2,
+  },
   heroTitle: {
-    fontSize: isWeb ? 36 : 28,
-    fontWeight: 'bold',
+    marginTop: isWeb ? 48 : 36,
+    fontSize: isWeb ? 32 : 22,
+    fontWeight: '700',
     color: '#1a365d',
     textAlign: 'center',
-    marginBottom: 20,
-    lineHeight: isWeb ? 44 : 36,
+    marginBottom: 16,
+    lineHeight: isWeb ? 40 : 30,
     ...(isWeb && {
       maxWidth: 600,
     }),
@@ -186,39 +183,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: isWeb ? 28 : 24,
     maxWidth: isWeb ? 600 : '100%',
-  },
-
-  // Stats Section
-  statsSection: {
-    backgroundColor: '#fff',
-    paddingVertical: 40,
-    paddingHorizontal: isWeb ? 40 : 20,
-    ...(isWeb && {
-      boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-    }),
-  },
-  statsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-around',
-    maxWidth: isWeb ? 800 : '100%',
-    alignSelf: 'center',
-  },
-  statItem: {
-    alignItems: 'center',
-    marginBottom: 20,
-    minWidth: isWeb ? 150 : 120,
-  },
-  statNumber: {
-    fontSize: isWeb ? 32 : 28,
-    fontWeight: 'bold',
-    color: '#2196f3',
-    marginBottom: 8,
-  },
-  statLabel: {
-    fontSize: isWeb ? 14 : 12,
-    color: '#666',
-    textAlign: 'center',
   },
 
   // Features Section
